@@ -1,9 +1,9 @@
 services:
   - type: web
-    name: proyecto-integrador-backend-g1
+    name: upnews-backend
     runtime: node
     plan: free
-    buildCommand: npm ci --include=dev && npm run build
+    buildCommand: npm ci --include=dev && npm run build && npm run db:deploy
     startCommand: npm start
     healthCheckPath: /health
     envVars:
@@ -17,9 +17,15 @@ services:
         sync: false
       - key: DIRECT_URL
         sync: false
-      - key: SUPABASE_PROJECT_REF
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
         sync: false
       - key: CORS_ORIGINS
         sync: false
-      - key: JWT_SECRET
-        generateValue: true
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_WEBHOOK_SECRET
+        sync: false # 16-256 caracteres [A-Za-z0-9_-]; no usar generateValue (puede incluir + / =)
+      - key: PUBLIC_URL
+        sync: false

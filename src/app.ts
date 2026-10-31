@@ -1,44 +1,24 @@
-import express from "express";
-import cors from "cors";
-import { readConfig } from "./config.js";
-import { prisma } from "./prisma.js";
-import type { ErrorRequestHandler } from "express";
-import { authRouter } from "./rutas/auth.js";
+import express, { type Express } from "express";
+import { crearRutas, type DependenciasRutas } from "./rutas/index.js";
+import { manejadorErrores, rutaNoEncontrada } from "./shared/http/middlewares/manejador-errores.js";
 
-export const app = express();
-const { corsOrigins, trustProxyHops } = readConfig();
-app.disable("x-powered-by");
-app.set("trust proxy", trustProxyHops);
-app.get("/health", async (_req, res) => {
-  res.setHeader("Cache-Control", "no-store");
-  try {
-    await prisma.$queryRaw`SELECT 1`;
-    res.json({ status: "ok" });
-  } catch {
-    res.status(503).json({ status: "unavailable" });
-  }
-});
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (origin && !corsOrigins.includes(origin)) {
-    res.status(403).json({ error: "Origen no autorizado" });
-    return;
-  }
-  next();
-});
-app.use(cors({ origin: corsOrigins, methods: ["GET", "POST", "OPTIONS"], allowedHeaders: ["Content-Type", "Authorization"], maxAge: 600 }));
-app.use(express.json({ limit: "16kb" }));
-app.use("/auth", authRouter);
-app.use((_req, res) => { res.status(404).json({ error: "Ruta no encontrada" }); });
-const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
-  if (error?.type === "entity.parse.failed") {
-    res.status(400).json({ error: "JSON inválido" });
-    return;
-  }
-  if (error?.type === "entity.too.large") {
-    res.status(413).json({ error: "Solicitud demasiado grande" });
-    return;
-  }
-  res.status(503).json({ error: "No se pudo completar la solicitud. Intente más tarde" });
-};
-app.use(errorHandler);
+export interface DependenciasApp extends DependenciasRutas {
+  trustProxyHops: number;
+}
+
+/**
+ * Arma la aplicación Express: configuración base, rutas (src/rutas) y manejo de errores.
+ * Recibe todo por parámetro (no importa config ni Prisma), así se puede levantar en pruebas.
+ */
+export function crearApp(deps: DependenciasApp): Express {
+  const app = express();
+  app.disable("x-powered-by");
+  app.set("trust proxy", deps.trustProxyHops);
+  app.use(express.json({ limit: "1mb" }));
+
+  app.use(crearRutas(deps));
+
+  app.use(rutaNoEncontrada);
+  app.use(manejadorErrores);
+  return app;
+}

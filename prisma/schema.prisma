@@ -1,37 +1,148 @@
 generator client {
   provider = "prisma-client"
-  output   = "../generated/prisma"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
-  schemas  = ["grupo_1"]
 }
 
-model Usuario {
-  id       String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  correo   String   @unique
-  clave    String
-  creadoEn DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
-  perfil   Perfil?
+// ─────────────────────────────────────────────────────────────
+// Modelo de datos de UP News
+// Basado en el diagrama Publicación / Evidencia / Canal / Métrica
+// y en el documento de alcance (bot de Telegram + contacto).
+// Convención: modelos en PascalCase, tablas y columnas en snake_case.
+// ─────────────────────────────────────────────────────────────
 
-  @@map("usuarios")
-  @@schema("grupo_1")
+enum RolUpNews {
+  DIRECTORA      @map("directora")
+  COMUNICACIONES @map("comunicaciones")
+  COLABORADOR    @map("colaborador")
+
+  @@map("rol_upnews")
 }
 
-model Perfil {
-  id                       String    @id @db.Uuid
-  nombres                  String    @default("")
-  apellidos                String?
-  celular                  String?
-  tipoDocumento            String?   @map("tipo_documento")
-  numeroDocumento          String?   @unique @map("numero_documento")
-  estado                   String    @default("activo")
-  aceptoTratamientoDatosEn  DateTime? @map("acepto_tratamiento_datos_en") @db.Timestamptz(6)
-  creadoEn                 DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
-  actualizadoEn            DateTime  @default(now()) @map("actualizado_en") @db.Timestamptz(6)
-  usuario                  Usuario   @relation(fields: [id], references: [id], onDelete: Cascade)
+enum EstadoPublicacion {
+  BORRADOR             @map("borrador")
+  PENDIENTE_APROBACION @map("pendiente_aprobacion")
+  PUBLICADA            @map("publicada")
+  ARCHIVADA            @map("archivada")
 
-  @@map("perfiles")
-  @@schema("grupo_1")
+  @@map("estado_publicacion")
+}
+
+enum TipoEvidencia {
+  IMAGEN @map("imagen")
+  VIDEO  @map("video")
+
+  @@map("tipo_evidencia")
+}
+
+/// Personas de la fundación habilitadas para usar el bot.
+/// Reemplaza a "PERSONA" del diagrama dentro de la base de UP News:
+/// la persona completa vive en el sistema del equipo principal.
+model UsuarioAutorizado {
+  id            String    @id @default(uuid(7)) @db.Uuid
+  telegramId    BigInt    @unique @map("telegram_id")
+  nombre        String
+  rol           RolUpNews @default(COLABORADOR)
+  activo        Boolean   @default(true)
+  creadoEn      DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime  @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+
+  publicacionesAutor    Publicacion[]          @relation("autor")
+  publicacionesAprobada Publicacion[]          @relation("aprobador")
+  contactosActualizados InformacionContacto[]
+
+  @@map("usuario_autorizado")
+}
+
+model Canal {
+  id            String        @id @default(uuid(7)) @db.Uuid
+  tipo          String        @unique // ej: "web", "telegram"
+  descripcion   String?
+  activo        Boolean       @default(true)
+  publicaciones Publicacion[]
+
+  @@map("canal")
+}
+
+model Publicacion {
+  id               String            @id @default(uuid(7)) @db.Uuid
+  titulo           String
+  resumen          String?
+  cuerpo           String
+  proposito        String?
+  etiqueta         String? // "tipo o etiqueta" del documento de alcance
+  estado           EstadoPublicacion @default(BORRADOR)
+  autorId          String            @map("autor_id") @db.Uuid
+  aprobadoPor      String?           @map("aprobado_por") @db.Uuid
+  canalId          String            @map("canal_id") @db.Uuid
+  // Origen opcional cuando la noticia nace en otro módulo del ecosistema
+  // (campos marcados en rojo en el diagrama: no tienen FK posible).
+  moduloOrigen     String?           @map("modulo_origen")
+  registroOrigenId String?           @map("registro_origen_id") @db.Uuid
+  publicadaEn      DateTime?         @map("publicada_en") @db.Timestamptz(6)
+  creadoEn         DateTime          @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn    DateTime          @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+
+  autor      UsuarioAutorizado      @relation("autor", fields: [autorId], references: [id])
+  aprobador  UsuarioAutorizado?     @relation("aprobador", fields: [aprobadoPor], references: [id])
+  canal      Canal                  @relation(fields: [canalId], references: [id])
+  evidencias PublicacionEvidencia[]
+  metricas   MetricaPublicacion[]
+
+  @@index([estado, publicadaEn(sort: Desc)])
+  @@map("publicacion")
+}
+
+model Evidencia {
+  id            String                 @id @default(uuid(7)) @db.Uuid
+  tipo          TipoEvidencia
+  url           String
+  descripcion   String?
+  creadoEn      DateTime               @default(now()) @map("creado_en") @db.Timestamptz(6)
+  publicaciones PublicacionEvidencia[]
+
+  @@map("evidencia")
+}
+
+model PublicacionEvidencia {
+  publicacionId            String  @map("publicacion_id") @db.Uuid
+  evidenciaId              String  @map("evidencia_id") @db.Uuid
+  consentimientoVerificado Boolean @default(false) @map("consentimiento_verificado")
+
+  publicacion Publicacion @relation(fields: [publicacionId], references: [id], onDelete: Cascade)
+  evidencia   Evidencia   @relation(fields: [evidenciaId], references: [id], onDelete: Cascade)
+
+  @@id([publicacionId, evidenciaId])
+  @@map("publicacion_evidencia")
+}
+
+model MetricaPublicacion {
+  id            String   @id @default(uuid(7)) @map("metrica_id") @db.Uuid
+  publicacionId String   @map("publicacion_id") @db.Uuid
+  fecha         DateTime @db.Date
+  vistas        Int      @default(0)
+  reacciones    Int      @default(0)
+  clics         Int      @default(0)
+
+  publicacion Publicacion @relation(fields: [publicacionId], references: [id], onDelete: Cascade)
+
+  @@unique([publicacionId, fecha])
+  @@map("metrica_publicacion")
+}
+
+/// Datos de contacto de la fundación editables desde el bot
+/// (teléfono, correo, dirección, redes sociales...).
+model InformacionContacto {
+  id              String   @id @default(uuid(7)) @db.Uuid
+  clave           String   @unique // ej: "telefono", "direccion", "instagram"
+  valor           String
+  actualizadoPor  String?  @map("actualizado_por") @db.Uuid
+  actualizadoEn   DateTime @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+
+  actualizador UsuarioAutorizado? @relation(fields: [actualizadoPor], references: [id])
+
+  @@map("informacion_contacto")
 }

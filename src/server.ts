@@ -1,21 +1,51 @@
-import { app } from "./app.js";
-import { readConfig } from "./config.js";
-import { checkDatabase, prisma } from "./prisma.js";
+import { crearApp } from "./app.js";
+import { env } from "./config/env.js";
+import { prisma, verificarBaseDeDatos } from "./config/prisma.js";
+import { contenedor } from "./contenedor.js";
+import { crearHandlerWebhook, iniciarBot } from "./modules/telegram/telegram.iniciar.js";
 
-const { host, port } = readConfig();
+/** Punto de entrada: verifica la base, levanta HTTP y arranca el bot. */
+const { bot } = contenedor;
+const usarWebhook = Boolean(bot && env.PUBLIC_URL && env.TELEGRAM_WEBHOOK_SECRET);
+
+const app = crearApp({
+  publicacionController: contenedor.publicacionController,
+  verificarSalud: verificarBaseDeDatos,
+  webhookTelegram: usarWebhook && bot && env.TELEGRAM_WEBHOOK_SECRET ? crearHandlerWebhook(bot, env.TELEGRAM_WEBHOOK_SECRET) : undefined,
+  corsOrigins: env.CORS_ORIGINS,
+  trustProxyHops: env.TRUST_PROXY_HOPS,
+});
+
 try {
-  await checkDatabase();
-  const server = app.listen(port, host, () => console.log(`Servidor disponible en http://${host}:${port}`));
-  server.on("error", async () => {
-    console.error("No se pudo abrir el puerto del servidor");
-    await prisma.$disconnect();
-    process.exitCode = 1;
-  });
-  for (const signal of ["SIGINT", "SIGTERM"] as const) {
-    process.once(signal, () => server.close(async () => { await prisma.$disconnect(); }));
-  }
-} catch {
-  console.error("No se pudo conectar o consultar grupo_1.usuarios. Revise DATABASE_URL, credenciales y permisos");
+  await verificarBaseDeDatos();
+} catch (error) {
+  console.error("No se pudo conectar a la base de datos. Revise DATABASE_URL y la contraseña.", error instanceof Error ? error.message : "");
   await prisma.$disconnect();
-  process.exitCode = 1;
+  process.exit(1);
 }
+
+if (bot) {
+  try {
+    await iniciarBot(bot, { publicUrl: env.PUBLIC_URL, secretToken: env.TELEGRAM_WEBHOOK_SECRET });
+  } catch (error) {
+    console.error("No se pudo iniciar el bot de Telegram:", error instanceof Error ? error.message : error);
+    await prisma.$disconnect();
+    process.exit(1);
+  }
+} else {
+  console.warn("TELEGRAM_BOT_TOKEN no configurado: el bot está desactivado (la API funciona igual).");
+}
+
+const server = app.listen(env.PORT, env.HOST, () => {
+  console.log(`UP News backend en http://${env.HOST}:${env.PORT}`);
+});
+
+async function apagar(): Promise<void> {
+  if (bot?.isRunning()) await bot.stop();
+  server.close(async () => {
+    await prisma.$disconnect();
+    process.exit(0);
+  });
+}
+process.once("SIGINT", apagar);
+process.once("SIGTERM", apagar);
