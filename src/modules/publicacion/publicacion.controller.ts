@@ -9,7 +9,7 @@ import type { PublicacionService } from "./publicacion.service.js";
  * No contiene reglas de negocio ni consultas a la base.
  * Los errores que lance el service los atrapa el middleware manejadorErrores.
  *
- * Por alcance del proyecto, la web solo LEE noticias: la escritura entra por el bot.
+ * La API pública solo lee noticias activas; las operaciones internas se exponen en Gestión.
  */
 export class PublicacionController {
   constructor(private readonly service: PublicacionService) {}

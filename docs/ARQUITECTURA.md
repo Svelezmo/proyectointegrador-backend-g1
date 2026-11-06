@@ -26,6 +26,7 @@ src/
 ├── rutas/               # TODAS las rutas HTTP en un solo lugar (+ comentarios @openapi para Swagger)
 │   ├── index.ts         # Monta todo: /health, /api-docs, /telegram/webhook, /api/...
 │   ├── publicacion.rutas.ts
+│   ├── miniapp.rutas.ts
 │   ├── salud.rutas.ts
 │   └── docs.rutas.ts    # Swagger UI
 ├── docs/swagger.ts      # Definición OpenAPI (info, servidores, esquemas reutilizables)
@@ -41,8 +42,9 @@ src/
 │   └── validacion.ts    # validar(esquemaDto, datos)
 └── modules/
     ├── publicacion/     # ← MÓDULO DE REFERENCIA (copiar este patrón)
+    ├── almacenamiento/  # Puerto de almacenamiento y adaptador de Cloudinary
+    ├── miniapp/         # Casos de uso y controller HTTP de la Mini App
     ├── usuario-autorizado/  # Lista blanca de Telegram (autenticación)
-    ├── canal/           # Mínimo: solo repository (completar cuando tenga reglas)
     └── telegram/        # Bot: es otra "entrada", como un controller
 ```
 
@@ -80,24 +82,30 @@ y el middleware `manejadorErrores` lo convierte en 404, 409, etc. El bot hace lo
 1. Telegram llama a `POST /telegram/webhook` (o el bot lo recibe por long polling en local).
 2. **telegram.autenticacion** busca `ctx.from.id` en `usuario_autorizado` → pone `ctx.actor`.
 3. **comandos/publicaciones** valida el id con `idPublicacionDto` y llama a `service.publicar(id, actor)`.
-4. **entity** verifica que el actor sea comunicaciones o directora y que el estado lo permita.
+4. **entity** verifica que el actor sea la directora y que el estado lo permita.
 5. **repository** guarda; Supabase Realtime avisa al frontend.
 
 ## Autenticación (sin JWT)
 
 - Telegram pone `from.id` en cada mensaje; no se puede falsificar si el webhook exige `secret_token`.
 - `usuario_autorizado.telegram_id` (BIGINT) es la lista blanca. Solo la directora agrega o revoca.
+- La Mini App valida criptográficamente `initData` con el token del bot, limita su antigüedad a 24 horas y verifica la lista blanca antes de firmar una subida o crear un borrador.
+- La validación entrega también el `Actor { id, nombre, rol }`; el frontend elige su vista por rol, pero el backend vuelve a validar el rol en cada operación.
+- Los endpoints `/api/gestion/*` son REST para clientes web y no dependen del bot de chat. Cada petición protegida requiere `X-Telegram-Init-Data`; no se confía en un rol enviado por el frontend.
+- Cloudinary se firma en el backend; el navegador recibe solo los parámetros públicos de subida y la firma temporal. La imagen y el borrador se asocian en una transacción.
 - Los services reciben un `Actor { id, nombre, rol }`; no saben de dónde salió.
-- Si en el futuro otro equipo necesita llamar a la API, se agrega una nueva forma de obtener el `Actor`
-  (p. ej. API key por equipo) sin tocar services ni entities.
+- Si otro frontend necesita autenticación no basada en Telegram, se agrega una nueva forma de obtener el `Actor` sin tocar services ni entities.
 
 ## Reglas de negocio actuales (propuesta, ajustar con el equipo)
 
-- Toda publicación nace como `BORRADOR`.
-- `COLABORADOR` (médicos, psicólogos...) crea borradores y los envía a aprobación.
-- `COMUNICACIONES` y `DIRECTORA` publican y archivan.
+- Las publicaciones nuevas pueden quedar como `BORRADOR` o `PENDIENTE_APROBACION`; nunca como aprobadas desde el formulario.
+- Los colaboradores pueden consultar y editar únicamente sus borradores.
+- Solo `DIRECTORA` puede aprobar, archivar o activar/desactivar publicaciones.
+- Una noticia aprobada queda en `PUBLICADA`, pero invisible en la API pública hasta que la directora la active (`esta_activo = true`).
 - Una publicación `ARCHIVADA` no se edita.
-- La web pública solo ve `PUBLICADA`, sin datos internos (autor, estado).
+- La web pública solo ve noticias `PUBLICADA` y activas, sin datos internos (autor, estado).
+- La gestión de usuarios es de colaboradores; su eliminación se implementa como desactivación para conservar el historial.
+- La información de contacto se guarda con nombre, tipo (`RED_SOCIAL`, `NUMERO_CONTACTO`, `DIRECCION`) e información.
 
 ## Checklist para un módulo nuevo (ej. `contacto`)
 
@@ -116,7 +124,6 @@ y el middleware `manejadorErrores` lo convierte en 404, 409, etc. El bot hace lo
 
 ## Pendientes conocidos
 
-- Módulos por construir: `contacto` (tabla `informacion_contacto` ya creada), `evidencia` (subir imagen/video a Supabase Storage y verificar consentimiento), `metrica`, `canal` completo.
+- Completar `evidencia` para videos y verificación de consentimiento, y `metrica`.
 - Cambiar los comandos de una línea por formularios paso a paso (`@grammyjs/conversations`) y botones en lugar de escribir UUIDs.
 - Componente o estilo de presentación de cada noticia (mencionado en el alcance): definir si es un campo de `publicacion`.
-- Integración con otros equipos del ecosistema (`modulo_origen`, `registro_origen_id`).

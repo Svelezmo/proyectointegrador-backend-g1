@@ -1,5 +1,4 @@
 import type { Actor } from "../../src/shared/domain/actor.js";
-import type { CanalRepository } from "../../src/modules/canal/canal.repository.js";
 import type { Publicacion } from "../../src/modules/publicacion/publicacion.entity.js";
 import type { PublicacionRepository } from "../../src/modules/publicacion/publicacion.repository.js";
 import type { UsuarioAutorizado } from "../../src/modules/usuario-autorizado/usuario-autorizado.entity.js";
@@ -14,16 +13,29 @@ export const directora: Actor = { id: "00000000-0000-4000-8000-000000000001", no
 export const comunicaciones: Actor = { id: "00000000-0000-4000-8000-000000000002", nombre: "Comunicaciones", rol: "COMUNICACIONES" };
 export const colaborador: Actor = { id: "00000000-0000-4000-8000-000000000003", nombre: "Psicóloga", rol: "COLABORADOR" };
 
-export const CANAL_WEB_ID = "00000000-0000-4000-8000-0000000000aa";
-
 export class PublicacionRepositoryEnMemoria implements PublicacionRepository {
   readonly datos = new Map<string, Publicacion>();
+  readonly imagenes = new Map<string, string>();
 
   async guardar(publicacion: Publicacion) {
     this.datos.set(publicacion.id, publicacion);
   }
+  async guardarConEvidencia(publicacion: Publicacion, imagenUrl: string) {
+    this.datos.set(publicacion.id, publicacion);
+    this.imagenes.set(publicacion.id, imagenUrl);
+  }
+  async actualizarConEvidencia(publicacion: Publicacion, imagenUrl: string) {
+    this.datos.set(publicacion.id, publicacion);
+    this.imagenes.set(publicacion.id, imagenUrl);
+  }
   async buscarPorId(id: string) {
     return this.datos.get(id) ?? null;
+  }
+  async listarGestion(autorId?: string) {
+    return [...this.datos.values()].filter(p => !autorId || p.autorId === autorId);
+  }
+  async eliminar(id: string) {
+    this.datos.delete(id);
   }
   async listarPublicadas({ pagina, limite, etiqueta }: { pagina: number; limite: number; etiqueta?: string | undefined }) {
     const publicadas = [...this.datos.values()].filter(
@@ -40,12 +52,6 @@ export class PublicacionRepositoryEnMemoria implements PublicacionRepository {
   }
 }
 
-export class CanalRepositoryEnMemoria implements CanalRepository {
-  async buscarIdActivoPorTipo(tipo: string) {
-    return tipo === "web" ? CANAL_WEB_ID : null;
-  }
-}
-
 export class UsuarioAutorizadoRepositoryEnMemoria implements UsuarioAutorizadoRepository {
   readonly datos = new Map<bigint, UsuarioAutorizado>();
 
@@ -54,6 +60,9 @@ export class UsuarioAutorizadoRepositoryEnMemoria implements UsuarioAutorizadoRe
   }
   async buscarPorTelegramId(telegramId: bigint) {
     return this.datos.get(telegramId) ?? null;
+  }
+  async buscarPorId(id: string) {
+    return [...this.datos.values()].find(user => user.aProps().id === id) ?? null;
   }
   async listar() {
     return [...this.datos.values()];

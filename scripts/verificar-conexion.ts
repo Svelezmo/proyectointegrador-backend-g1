@@ -14,9 +14,9 @@ try {
     const [{ tablas }] = await prisma.$queryRaw<[{ tablas: bigint }]>`
       SELECT count(*) AS tablas FROM information_schema.tables
       WHERE table_schema = 'public' AND table_name IN
-        ('usuario_autorizado','canal','publicacion','evidencia','publicacion_evidencia','metrica_publicacion','informacion_contacto')`;
-    console.log(`OK: conexión establecida. Tablas de UP News encontradas: ${tablas}/7`);
-    if (tablas < 7n) console.log("Falta aplicar las migraciones: npm run db:migrate");
+        ('usuario_autorizado','publicacion','evidencia','publicacion_evidencia','metrica_publicacion','informacion_contacto')`;
+    console.log(`OK: conexión establecida. Tablas de UP News encontradas: ${tablas}/6`);
+    if (tablas < 6n) console.log("Falta aplicar las migraciones: npm run db:migrate");
   } finally {
     await prisma.$disconnect();
   }

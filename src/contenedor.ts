@@ -1,10 +1,19 @@
 import { env } from "./config/env.js";
 import { prisma } from "./config/prisma.js";
-import { PrismaCanalRepository } from "./modules/canal/canal.repository.js";
+import { TelegramAuthController } from "./modules/auth/telegram-auth.controller.js";
+import { TelegramStatelessSessionProvider } from "./modules/auth/telegram-stateless-session.provider.js";
+import { GestionController } from "./modules/gestion/gestion.controller.js";
+import { PrismaInformacionContactoRepository } from "./modules/contacto/informacion-contacto.prisma.repository.js";
+import { InformacionContactoService } from "./modules/contacto/informacion-contacto.service.js";
+import { CloudinaryStorageAdapter } from "./modules/almacenamiento/cloudinary-storage.adapter.js";
+import { MiniAppController } from "./modules/miniapp/miniapp.controller.js";
+import { MiniAppService } from "./modules/miniapp/miniapp.service.js";
 import { PublicacionController } from "./modules/publicacion/publicacion.controller.js";
 import { PrismaPublicacionRepository } from "./modules/publicacion/publicacion.prisma.repository.js";
 import { PublicacionService } from "./modules/publicacion/publicacion.service.js";
 import { crearBot } from "./modules/telegram/telegram.bot.js";
+import { TelegramCryptoService } from "./modules/telegram/telegram-crypto.service.js";
+import { TelegramMiniAppAuthService } from "./modules/telegram/telegram-miniapp-auth.service.js";
 import { PrismaUsuarioAutorizadoRepository } from "./modules/usuario-autorizado/usuario-autorizado.prisma.repository.js";
 import { UsuarioAutorizadoService } from "./modules/usuario-autorizado/usuario-autorizado.service.js";
 
@@ -17,15 +26,55 @@ import { UsuarioAutorizadoService } from "./modules/usuario-autorizado/usuario-a
 
 // Repositories (infraestructura)
 const publicacionRepository = new PrismaPublicacionRepository(prisma);
-const canalRepository = new PrismaCanalRepository(prisma);
 const usuarioAutorizadoRepository = new PrismaUsuarioAutorizadoRepository(prisma);
+const informacionContactoRepository = new PrismaInformacionContactoRepository(prisma);
+const almacenamiento =
+  env.CLOUDINARY_CLOUD_NAME &&
+  env.CLOUDINARY_API_KEY &&
+  env.CLOUDINARY_API_SECRET
+    ? new CloudinaryStorageAdapter(
+        env.CLOUDINARY_CLOUD_NAME,
+        env.CLOUDINARY_API_KEY,
+        env.CLOUDINARY_API_SECRET,
+        env.CLOUDINARY_UPLOAD_FOLDER,
+      )
+    : undefined;
 
 // Services (casos de uso)
-const publicacionService = new PublicacionService(publicacionRepository, canalRepository);
+const publicacionService = new PublicacionService(publicacionRepository);
 const usuarioAutorizadoService = new UsuarioAutorizadoService(usuarioAutorizadoRepository);
+const informacionContactoService = new InformacionContactoService(informacionContactoRepository);
 
 // Entradas: controllers HTTP y bot de Telegram
 const publicacionController = new PublicacionController(publicacionService);
+let telegramAuthController: TelegramAuthController | undefined;
+let miniAppController: MiniAppController | undefined;
+let gestionController: GestionController | undefined;
+let autenticacion: TelegramMiniAppAuthService | undefined;
+if (env.TELEGRAM_BOT_TOKEN) {
+  autenticacion = new TelegramMiniAppAuthService(
+    new TelegramCryptoService(env.TELEGRAM_BOT_TOKEN),
+    usuarioAutorizadoService,
+    new TelegramStatelessSessionProvider(),
+  );
+  telegramAuthController = new TelegramAuthController(autenticacion);
+  gestionController = new GestionController(
+    autenticacion,
+    publicacionService,
+    usuarioAutorizadoService,
+    informacionContactoService,
+    almacenamiento,
+  );
+}
+if (
+  almacenamiento &&
+  env.TELEGRAM_BOT_TOKEN &&
+  autenticacion
+) {
+  miniAppController = new MiniAppController(
+    new MiniAppService(autenticacion, almacenamiento, publicacionService),
+  );
+}
 const bot = env.TELEGRAM_BOT_TOKEN
   ? crearBot(env.TELEGRAM_BOT_TOKEN, { usuarios: usuarioAutorizadoService, publicaciones: publicacionService })
   : null;
@@ -34,5 +83,8 @@ export const contenedor = {
   publicacionService,
   usuarioAutorizadoService,
   publicacionController,
+  telegramAuthController,
+  miniAppController,
+  gestionController,
   bot,
 };

@@ -4,12 +4,14 @@ import {
   NoAutorizadoError,
   NoEncontradoError,
   ReglaDeNegocioError,
+  TelegramInitDataInvalidoError,
   ValidacionError,
 } from "../../domain/errores.js";
 
 const ESTADO_HTTP = new Map<Function, number>([
   [ValidacionError, 400],
   [NoAutorizadoError, 403],
+  [TelegramInitDataInvalidoError, 403],
   [NoEncontradoError, 404],
   [ReglaDeNegocioError, 409],
 ]);

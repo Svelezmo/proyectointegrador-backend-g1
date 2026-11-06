@@ -19,11 +19,9 @@ export const PublicacionMapper = {
       proposito: fila.proposito,
       etiqueta: fila.etiqueta,
       estado: fila.estado,
+      estaActivo: fila.estaActivo,
       autorId: fila.autorId,
       aprobadoPor: fila.aprobadoPor,
-      canalId: fila.canalId,
-      moduloOrigen: fila.moduloOrigen,
-      registroOrigenId: fila.registroOrigenId,
       publicadaEn: fila.publicadaEn,
       creadoEn: fila.creadoEn,
       actualizadoEn: fila.actualizadoEn,
@@ -54,6 +52,8 @@ export const PublicacionMapper = {
     return {
       ...PublicacionMapper.aPublicaDto(publicacion),
       estado: p.estado,
+      estaActivo: p.estaActivo,
+      autorId: p.autorId,
       proposito: p.proposito,
       actualizadoEn: p.actualizadoEn.toISOString(),
     };

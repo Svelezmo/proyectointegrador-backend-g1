@@ -12,7 +12,12 @@ import type { Publicacion } from "./publicacion.entity.js";
 export interface PublicacionRepository {
   /** Inserta o actualiza la publicación completa. */
   guardar(publicacion: Publicacion): Promise<void>;
+  /** Inserta una publicación y su evidencia de imagen de forma atómica. */
+  guardarConEvidencia(publicacion: Publicacion, imagenUrl: string): Promise<void>;
+  actualizarConEvidencia(publicacion: Publicacion, imagenUrl: string): Promise<void>;
   buscarPorId(id: string): Promise<Publicacion | null>;
+  listarGestion(autorId?: string): Promise<Publicacion[]>;
+  eliminar(id: string): Promise<void>;
   listarPublicadas(filtro: Paginacion & { etiqueta?: string | undefined }): Promise<{ items: Publicacion[]; total: number }>;
   /** Etiquetas distintas de las publicaciones visibles (para los filtros de la web). */
   listarEtiquetasPublicadas(): Promise<string[]>;

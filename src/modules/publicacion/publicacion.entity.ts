@@ -19,11 +19,9 @@ export interface PropsPublicacion {
   proposito: string | null;
   etiqueta: string | null;
   estado: EstadoPublicacion;
+  estaActivo: boolean;
   autorId: string;
   aprobadoPor: string | null;
-  canalId: string;
-  moduloOrigen: string | null;
-  registroOrigenId: string | null;
   publicadaEn: Date | null;
   creadoEn: Date;
   actualizadoEn: Date;
@@ -35,12 +33,15 @@ export interface DatosNuevaPublicacion {
   resumen?: string | null | undefined;
   proposito?: string | null | undefined;
   etiqueta?: string | null | undefined;
-  canalId: string;
-  moduloOrigen?: string | null | undefined;
-  registroOrigenId?: string | null | undefined;
+  estado?: "BORRADOR" | "PENDIENTE_APROBACION" | undefined;
 }
 
-type CampoEditable = "titulo" | "resumen" | "cuerpo" | "proposito" | "etiqueta";
+type CampoEditable =
+  | "titulo"
+  | "resumen"
+  | "cuerpo"
+  | "proposito"
+  | "etiqueta";
 /** Campos que se pueden editar; los que llegan como undefined se ignoran. */
 export type CambiosPublicacion = { [K in CampoEditable]?: PropsPublicacion[K] | undefined };
 
@@ -49,7 +50,7 @@ const LONGITUD_MAXIMA_TITULO = 150;
 export class Publicacion {
   private constructor(private props: PropsPublicacion) {}
 
-  /** Crea una publicación nueva (siempre empieza como BORRADOR). */
+  /** Crea una publicación en el estado editable elegido por el autor. */
   static crear(datos: DatosNuevaPublicacion, autor: Actor, ahora = new Date()): Publicacion {
     const publicacion = new Publicacion({
       id: randomUUID(),
@@ -58,12 +59,10 @@ export class Publicacion {
       resumen: datos.resumen ?? null,
       proposito: datos.proposito ?? null,
       etiqueta: datos.etiqueta ?? null,
-      estado: "BORRADOR",
+      estado: datos.estado ?? "BORRADOR",
+      estaActivo: false,
       autorId: autor.id,
       aprobadoPor: null,
-      canalId: datos.canalId,
-      moduloOrigen: datos.moduloOrigen ?? null,
-      registroOrigenId: datos.registroOrigenId ?? null,
       publicadaEn: null,
       creadoEn: ahora,
       actualizadoEn: ahora,
@@ -81,7 +80,8 @@ export class Publicacion {
   get titulo() { return this.props.titulo; }
   get estado() { return this.props.estado; }
   get autorId() { return this.props.autorId; }
-  get estaPublicada() { return this.props.estado === "PUBLICADA"; }
+  get estaActivo() { return this.props.estaActivo; }
+  get estaPublicada() { return this.props.estado === "PUBLICADA" && this.props.estaActivo; }
 
   /** Copia de solo lectura de los datos, para mappers y DTOs. */
   aProps(): Readonly<PropsPublicacion> {
@@ -89,11 +89,11 @@ export class Publicacion {
   }
 
   editar(cambios: CambiosPublicacion, actor: Actor, ahora = new Date()): void {
-    if (this.props.estado === "ARCHIVADA") {
-      throw new ReglaDeNegocioError("No se puede editar una publicación archivada");
+    if (actor.rol !== "DIRECTORA" && (actor.id !== this.props.autorId || this.props.estado !== "BORRADOR")) {
+      throw new NoAutorizadoError("Solo la directora puede editar una publicación fuera de sus borradores");
     }
-    if (actor.id !== this.props.autorId && !puedeAprobar(actor)) {
-      throw new NoAutorizadoError("Solo el autor, comunicaciones o la directora pueden editar esta publicación");
+    if (this.props.estado === "ARCHIVADA" && actor.rol !== "DIRECTORA") {
+      throw new ReglaDeNegocioError("No se puede editar una publicación archivada");
     }
     const anterior = { ...this.props };
     Object.assign(this.props, Object.fromEntries(Object.entries(cambios).filter(([, valor]) => valor !== undefined)));
@@ -118,15 +118,16 @@ export class Publicacion {
     this.props.actualizadoEn = ahora;
   }
 
-  /** Publica (o aprueba y publica). Solo directora o comunicaciones. */
+  /** Aprueba y publica. Solo directora. La activación es una acción separada. */
   publicar(actor: Actor, ahora = new Date()): void {
     if (!puedeAprobar(actor)) {
-      throw new NoAutorizadoError("Solo comunicaciones o la directora pueden publicar");
+      throw new NoAutorizadoError("Solo la directora puede aprobar y publicar");
     }
     if (this.props.estado !== "BORRADOR" && this.props.estado !== "PENDIENTE_APROBACION") {
       throw new ReglaDeNegocioError(`No se puede publicar una publicación en estado ${this.props.estado}`);
     }
     this.props.estado = "PUBLICADA";
+    this.props.estaActivo = false;
     this.props.aprobadoPor = actor.id;
     this.props.publicadaEn = ahora;
     this.props.actualizadoEn = ahora;
@@ -134,12 +135,24 @@ export class Publicacion {
 
   archivar(actor: Actor, ahora = new Date()): void {
     if (!puedeAprobar(actor)) {
-      throw new NoAutorizadoError("Solo comunicaciones o la directora pueden archivar");
+      throw new NoAutorizadoError("Solo la directora puede archivar");
     }
     if (this.props.estado === "ARCHIVADA") {
       throw new ReglaDeNegocioError("La publicación ya está archivada");
     }
     this.props.estado = "ARCHIVADA";
+    this.props.estaActivo = false;
+    this.props.actualizadoEn = ahora;
+  }
+
+  cambiarActivacion(estaActivo: boolean, actor: Actor, ahora = new Date()): void {
+    if (actor.rol !== "DIRECTORA") {
+      throw new NoAutorizadoError("Solo la directora puede activar o desactivar una publicación");
+    }
+    if (estaActivo && this.props.estado !== "PUBLICADA") {
+      throw new ReglaDeNegocioError("Solo una publicación aprobada puede activarse");
+    }
+    this.props.estaActivo = estaActivo;
     this.props.actualizadoEn = ahora;
   }
 
@@ -147,7 +160,6 @@ export class Publicacion {
     const campos: string[] = [];
     if (this.props.titulo.trim().length === 0 || this.props.titulo.length > LONGITUD_MAXIMA_TITULO) campos.push("titulo");
     if (this.props.cuerpo.trim().length === 0) campos.push("cuerpo");
-    if ((this.props.moduloOrigen === null) !== (this.props.registroOrigenId === null)) campos.push("moduloOrigen");
     if (campos.length > 0) throw new ValidacionError("La publicación no es válida", campos);
   }
 }

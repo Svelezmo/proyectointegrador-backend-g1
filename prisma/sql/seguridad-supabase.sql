@@ -28,7 +28,7 @@ DROP POLICY IF EXISTS "web lee publicaciones publicadas" ON public.publicacion;
 CREATE POLICY "web lee publicaciones publicadas"
   ON public.publicacion FOR SELECT
   TO anon
-  USING (estado = 'publicada');
+  USING (estado = 'publicada' AND esta_activo = true);
 
 -- 4. Avisar en tiempo real al frontend cuando se inserta o actualiza una publicación.
 DO $$

@@ -1,6 +1,5 @@
 /**
  * Carga los datos mínimos para empezar (se puede ejecutar varias veces sin duplicar):
- *   - canal "web"
  *   - la primera directora en la lista blanca del bot (nadie más puede autorizarla)
  *
  * Uso:  npm run db:inicializar -- <telegramId> "<Nombre de la directora>"
@@ -13,13 +12,6 @@ import { PrismaUsuarioAutorizadoRepository } from "../src/modules/usuario-autori
 const [telegramIdTexto, ...partesNombre] = process.argv.slice(2);
 
 try {
-  await prisma.canal.upsert({
-    where: { tipo: "web" },
-    create: { tipo: "web", descripcion: "Página web de la fundación" },
-    update: {},
-  });
-  console.log("OK: canal 'web'");
-
   if (telegramIdTexto && /^\d+$/.test(telegramIdTexto) && partesNombre.length > 0) {
     const repo = new PrismaUsuarioAutorizadoRepository(prisma);
     const telegramId = BigInt(telegramIdTexto);

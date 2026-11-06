@@ -14,7 +14,7 @@ export interface Actor {
   readonly rol: Rol;
 }
 
-/** Roles que pueden publicar sin pasar por aprobación. */
+/** Solo la directora puede aprobar y publicar. */
 export function puedeAprobar(actor: Actor): boolean {
-  return actor.rol === "DIRECTORA" || actor.rol === "COMUNICACIONES";
+  return actor.rol === "DIRECTORA";
 }

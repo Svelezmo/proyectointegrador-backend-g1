@@ -31,6 +31,13 @@ export class NoAutorizadoError extends ErrorDeDominio {
   readonly codigo = "NO_AUTORIZADO";
 }
 
+/** initData inválido, manipulado o expirado. */
+export class TelegramInitDataInvalidoError extends NoAutorizadoError {
+  constructor() {
+    super("La sesión de Telegram es inválida o ha expirado");
+  }
+}
+
 /** La acción es válida en formato, pero viola una regla del negocio (ej: editar una noticia archivada). */
 export class ReglaDeNegocioError extends ErrorDeDominio {
   readonly codigo = "REGLA_DE_NEGOCIO";

@@ -22,6 +22,11 @@ export const autorizarUsuarioDto = z
 export type AutorizarUsuarioDto = z.output<typeof autorizarUsuarioDto>;
 
 export const telegramIdDto = z.object({ telegramId });
+export const idUsuarioDto = z.object({ id: z.uuid() });
+export const editarUsuarioDto = z.object({
+  nombre: z.string().trim().min(1).max(150).optional(),
+  activo: z.boolean().optional(),
+}).strict().refine(datos => Object.keys(datos).length > 0, { message: "Envíe al menos un campo" });
 
 export interface UsuarioAutorizadoDto {
   id: string;

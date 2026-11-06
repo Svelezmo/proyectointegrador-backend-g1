@@ -1,7 +1,6 @@
 import type { Actor } from "../../shared/domain/actor.js";
-import { NoEncontradoError, ValidacionError } from "../../shared/domain/errores.js";
+import { NoAutorizadoError, NoEncontradoError } from "../../shared/domain/errores.js";
 import type { Pagina } from "../../shared/domain/paginacion.js";
-import type { CanalRepository } from "../canal/canal.repository.js";
 import type {
   CrearPublicacionDto,
   EditarPublicacionDto,
@@ -22,10 +21,7 @@ import type { PublicacionRepository } from "./publicacion.repository.js";
  * No sabe si lo llamó un controlador HTTP o un comando de Telegram.
  */
 export class PublicacionService {
-  constructor(
-    private readonly publicaciones: PublicacionRepository,
-    private readonly canales: CanalRepository,
-  ) {}
+  constructor(private readonly publicaciones: PublicacionRepository) {}
 
   // ── Casos de uso públicos (página web) ───────────────────
 
@@ -44,18 +40,54 @@ export class PublicacionService {
     return this.publicaciones.listarEtiquetasPublicadas();
   }
 
-  // ── Casos de uso internos (bot de Telegram) ──────────────
+  // ── Casos de uso internos (API de gestión y bot) ────────
 
-  async crear(dto: CrearPublicacionDto, actor: Actor): Promise<PublicacionInternaDto> {
-    const canalId = await this.canales.buscarIdActivoPorTipo(dto.canal);
-    if (!canalId) throw new ValidacionError(`El canal "${dto.canal}" no existe o está inactivo`, ["canal"]);
-    const publicacion = Publicacion.crear({ ...dto, canalId }, actor);
-    await this.publicaciones.guardar(publicacion);
+  async crear(dto: CrearPublicacionDto, actor: Actor, imagenUrl?: string): Promise<PublicacionInternaDto> {
+    const publicacion = Publicacion.crear(dto, actor);
+    if (imagenUrl) {
+      await this.publicaciones.guardarConEvidencia(publicacion, imagenUrl);
+    } else {
+      await this.publicaciones.guardar(publicacion);
+    }
     return PublicacionMapper.aInternaDto(publicacion);
   }
 
-  async editar(id: string, dto: EditarPublicacionDto, actor: Actor): Promise<PublicacionInternaDto> {
-    return this.modificar(id, publicacion => publicacion.editar(dto, actor));
+  async listarGestion(actor: Actor): Promise<PublicacionInternaDto[]> {
+    const items = await this.publicaciones.listarGestion(
+      actor.rol === "DIRECTORA" ? undefined : actor.id,
+    );
+    return items
+      .filter(publicacion =>
+        actor.rol === "DIRECTORA" ||
+        (publicacion.autorId === actor.id && publicacion.estado === "BORRADOR"),
+      )
+      .map(PublicacionMapper.aInternaDto);
+  }
+
+  async obtenerGestion(id: string, actor: Actor): Promise<PublicacionInternaDto> {
+    const publicacion = await this.publicaciones.buscarPorId(id);
+    if (!publicacion) throw new NoEncontradoError("Publicación no encontrada");
+    if (actor.rol !== "DIRECTORA" && (publicacion.autorId !== actor.id || publicacion.estado !== "BORRADOR")) {
+      throw new NoEncontradoError("Publicación no encontrada");
+    }
+    return PublicacionMapper.aInternaDto(publicacion);
+  }
+
+  async editar(
+    id: string,
+    dto: EditarPublicacionDto,
+    actor: Actor,
+    imagenUrl?: string,
+  ): Promise<PublicacionInternaDto> {
+    const publicacion = await this.publicaciones.buscarPorId(id);
+    if (!publicacion) throw new NoEncontradoError("Publicación no encontrada");
+    publicacion.editar(dto, actor);
+    if (imagenUrl) {
+      await this.publicaciones.actualizarConEvidencia(publicacion, imagenUrl);
+    } else {
+      await this.publicaciones.guardar(publicacion);
+    }
+    return PublicacionMapper.aInternaDto(publicacion);
   }
 
   async enviarAAprobacion(id: string, actor: Actor): Promise<PublicacionInternaDto> {
@@ -66,8 +98,31 @@ export class PublicacionService {
     return this.modificar(id, publicacion => publicacion.publicar(actor));
   }
 
+  async aprobarYActivar(id: string, actor: Actor): Promise<PublicacionInternaDto> {
+    return this.modificar(id, publicacion => {
+      publicacion.publicar(actor);
+      publicacion.cambiarActivacion(true, actor);
+    });
+  }
+
   async archivar(id: string, actor: Actor): Promise<PublicacionInternaDto> {
     return this.modificar(id, publicacion => publicacion.archivar(actor));
+  }
+
+  async cambiarActivacion(id: string, estaActivo: boolean, actor: Actor): Promise<PublicacionInternaDto> {
+    return this.modificar(id, publicacion => publicacion.cambiarActivacion(estaActivo, actor));
+  }
+
+  async eliminar(id: string, actor: Actor): Promise<void> {
+    const publicacion = await this.publicaciones.buscarPorId(id);
+    if (!publicacion) throw new NoEncontradoError("Publicación no encontrada");
+    if (
+      actor.rol !== "DIRECTORA" &&
+      (publicacion.autorId !== actor.id || publicacion.estado !== "BORRADOR")
+    ) {
+      throw new NoEncontradoError("Publicación no encontrada");
+    }
+    await this.publicaciones.eliminar(id);
   }
 
   async listarPorEstado(estado: EstadoPublicacion, limite = 10): Promise<PublicacionInternaDto[]> {

@@ -30,4 +30,19 @@ describe("UsuarioAutorizadoService", () => {
       NoAutorizadoError,
     );
   });
+
+  test("la directora solo registra colaboradores y la baja puede revertirse", async () => {
+    const user = await service.registrarColaborador(
+      { telegramId: 888n, nombre: "Colaboradora" },
+      directora,
+    );
+    assert.equal(user.rol, "COLABORADOR");
+    await service.actualizar(user.id, { activo: false }, directora);
+    const reactivado = await service.registrarColaborador(
+      { telegramId: 888n, nombre: "Colaboradora actualizada" },
+      directora,
+    );
+    assert.equal(reactivado.activo, true);
+    assert.equal(reactivado.id, user.id);
+  });
 });

@@ -31,6 +31,10 @@ const esquemaEnv = z.object({
     .string()
     .regex(/^[A-Za-z0-9_-]{16,256}$/, "Use 16-256 caracteres: letras, números, _ o -")
     .optional(),
+  CLOUDINARY_CLOUD_NAME: z.string().regex(/^[A-Za-z0-9_-]+$/).optional(),
+  CLOUDINARY_API_KEY: z.string().min(1).optional(),
+  CLOUDINARY_API_SECRET: z.string().min(1).optional(),
+  CLOUDINARY_UPLOAD_FOLDER: z.string().trim().min(1).default("upnews"),
   // URL pública del backend (ej: https://upnews.onrender.com). Si falta, el bot usa long polling en desarrollo.
   PUBLIC_URL: z.url({ protocol: /^https$/ }).optional(),
 });
@@ -54,6 +58,17 @@ export function leerEnv(fuente: NodeJS.ProcessEnv = process.env): Env {
   }
   if (Boolean(env.SUPABASE_URL) !== Boolean(env.SUPABASE_ANON_KEY)) {
     throw new Error("SUPABASE_URL y SUPABASE_ANON_KEY deben configurarse juntas");
+  }
+  const cloudinaryConfigurado = [
+    env.CLOUDINARY_CLOUD_NAME,
+    env.CLOUDINARY_API_KEY,
+    env.CLOUDINARY_API_SECRET,
+  ].filter(Boolean).length;
+  if (cloudinaryConfigurado !== 0 && cloudinaryConfigurado !== 3) {
+    throw new Error("CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY y CLOUDINARY_API_SECRET deben configurarse juntas");
+  }
+  if (cloudinaryConfigurado === 3 && !env.TELEGRAM_BOT_TOKEN) {
+    throw new Error("TELEGRAM_BOT_TOKEN es necesario para validar initData de Telegram");
   }
   if (env.TELEGRAM_BOT_TOKEN && !env.TELEGRAM_WEBHOOK_SECRET && env.PUBLIC_URL) {
     throw new Error("Con PUBLIC_URL (webhook) también se requiere TELEGRAM_WEBHOOK_SECRET");

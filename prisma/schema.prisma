@@ -9,7 +9,7 @@ datasource db {
 
 // ─────────────────────────────────────────────────────────────
 // Modelo de datos de UP News
-// Basado en el diagrama Publicación / Evidencia / Canal / Métrica
+// Basado en el diagrama Publicación / Evidencia / Métrica
 // y en el documento de alcance (bot de Telegram + contacto).
 // Convención: modelos en PascalCase, tablas y columnas en snake_case.
 // ─────────────────────────────────────────────────────────────
@@ -38,6 +38,14 @@ enum TipoEvidencia {
   @@map("tipo_evidencia")
 }
 
+enum TipoInformacionContacto {
+  RED_SOCIAL        @map("red_social")
+  NUMERO_CONTACTO  @map("numero_contacto")
+  DIRECCION         @map("direccion")
+
+  @@map("tipo_informacion_contacto")
+}
+
 /// Personas de la fundación habilitadas para usar el bot.
 /// Reemplaza a "PERSONA" del diagrama dentro de la base de UP News:
 /// la persona completa vive en el sistema del equipo principal.
@@ -57,16 +65,6 @@ model UsuarioAutorizado {
   @@map("usuario_autorizado")
 }
 
-model Canal {
-  id            String        @id @default(uuid(7)) @db.Uuid
-  tipo          String        @unique // ej: "web", "telegram"
-  descripcion   String?
-  activo        Boolean       @default(true)
-  publicaciones Publicacion[]
-
-  @@map("canal")
-}
-
 model Publicacion {
   id               String            @id @default(uuid(7)) @db.Uuid
   titulo           String
@@ -75,20 +73,15 @@ model Publicacion {
   proposito        String?
   etiqueta         String? // "tipo o etiqueta" del documento de alcance
   estado           EstadoPublicacion @default(BORRADOR)
+  estaActivo       Boolean           @default(false) @map("esta_activo")
   autorId          String            @map("autor_id") @db.Uuid
   aprobadoPor      String?           @map("aprobado_por") @db.Uuid
-  canalId          String            @map("canal_id") @db.Uuid
-  // Origen opcional cuando la noticia nace en otro módulo del ecosistema
-  // (campos marcados en rojo en el diagrama: no tienen FK posible).
-  moduloOrigen     String?           @map("modulo_origen")
-  registroOrigenId String?           @map("registro_origen_id") @db.Uuid
   publicadaEn      DateTime?         @map("publicada_en") @db.Timestamptz(6)
   creadoEn         DateTime          @default(now()) @map("creado_en") @db.Timestamptz(6)
   actualizadoEn    DateTime          @updatedAt @map("actualizado_en") @db.Timestamptz(6)
 
   autor      UsuarioAutorizado      @relation("autor", fields: [autorId], references: [id])
   aprobador  UsuarioAutorizado?     @relation("aprobador", fields: [aprobadoPor], references: [id])
-  canal      Canal                  @relation(fields: [canalId], references: [id])
   evidencias PublicacionEvidencia[]
   metricas   MetricaPublicacion[]
 
@@ -133,16 +126,17 @@ model MetricaPublicacion {
   @@map("metrica_publicacion")
 }
 
-/// Datos de contacto de la fundación editables desde el bot
-/// (teléfono, correo, dirección, redes sociales...).
+/// Datos de contacto de la fundación administrados desde la API web.
 model InformacionContacto {
-  id              String   @id @default(uuid(7)) @db.Uuid
-  clave           String   @unique // ej: "telefono", "direccion", "instagram"
-  valor           String
-  actualizadoPor  String?  @map("actualizado_por") @db.Uuid
-  actualizadoEn   DateTime @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  id              String                  @id @default(uuid(7)) @db.Uuid
+  nombre          String
+  tipo            TipoInformacionContacto
+  informacion     String
+  actualizadoPor  String?                 @map("actualizado_por") @db.Uuid
+  actualizadoEn   DateTime                @updatedAt @map("actualizado_en") @db.Timestamptz(6)
 
   actualizador UsuarioAutorizado? @relation(fields: [actualizadoPor], references: [id])
 
+  @@unique([nombre, tipo])
   @@map("informacion_contacto")
 }

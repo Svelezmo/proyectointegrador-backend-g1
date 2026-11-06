@@ -57,6 +57,13 @@ export class UsuarioAutorizado {
     this.props.actualizadoEn = ahora;
   }
 
+  cambiarNombre(nombre: string, ahora = new Date()): void {
+    const nombreNormalizado = nombre.trim();
+    if (!nombreNormalizado) throw new ValidacionError("El nombre es obligatorio", ["nombre"]);
+    this.props.nombre = nombreNormalizado;
+    this.props.actualizadoEn = ahora;
+  }
+
   activar(ahora = new Date()): void {
     this.props.activo = true;
     this.props.actualizadoEn = ahora;

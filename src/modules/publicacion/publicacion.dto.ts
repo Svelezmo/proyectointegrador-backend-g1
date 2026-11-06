@@ -19,14 +19,19 @@ export const crearPublicacionDto = z
     resumen: textoOpcional(500),
     proposito: textoOpcional(200),
     etiqueta: textoOpcional(50),
-    canal: z.string().trim().min(1).default("web"),
+    estado: z.enum(["BORRADOR", "PENDIENTE_APROBACION"]).default("BORRADOR"),
   })
   .strict();
 export type CrearPublicacionDto = z.output<typeof crearPublicacionDto>;
 
 export const editarPublicacionDto = crearPublicacionDto
-  .omit({ canal: true })
+  .omit({ estado: true })
   .partial()
+  .extend({
+    resumen: textoOpcional(500).nullable().optional(),
+    proposito: textoOpcional(200).nullable().optional(),
+    etiqueta: textoOpcional(50).nullable().optional(),
+  })
   .strict()
   .refine(datos => Object.keys(datos).length > 0, { message: "Envíe al menos un campo" });
 export type EditarPublicacionDto = z.output<typeof editarPublicacionDto>;
@@ -55,6 +60,8 @@ export interface PublicacionPublicaDto {
 /** Lo que ve el equipo interno (bot): incluye estado. */
 export interface PublicacionInternaDto extends PublicacionPublicaDto {
   estado: EstadoPublicacion;
+  estaActivo: boolean;
+  autorId: string;
   proposito: string | null;
   actualizadoEn: string;
 }

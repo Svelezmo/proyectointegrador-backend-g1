@@ -1,5 +1,5 @@
 import type { Actor } from "../../shared/domain/actor.js";
-import { NoAutorizadoError, NoEncontradoError } from "../../shared/domain/errores.js";
+import { NoAutorizadoError, NoEncontradoError, ReglaDeNegocioError } from "../../shared/domain/errores.js";
 import type { AutorizarUsuarioDto, UsuarioAutorizadoDto } from "./usuario-autorizado.dto.js";
 import { UsuarioAutorizado } from "./usuario-autorizado.entity.js";
 import { UsuarioAutorizadoMapper } from "./usuario-autorizado.mapper.js";
@@ -47,6 +47,41 @@ export class UsuarioAutorizadoService {
   async listar(actor: Actor): Promise<UsuarioAutorizadoDto[]> {
     this.exigirDirectora(actor);
     return (await this.usuarios.listar()).map(UsuarioAutorizadoMapper.aDto);
+  }
+
+  async registrarColaborador(
+    datos: { telegramId: bigint; nombre: string },
+    actor: Actor,
+  ): Promise<UsuarioAutorizadoDto> {
+    this.exigirDirectora(actor);
+    const existente = await this.usuarios.buscarPorTelegramId(datos.telegramId);
+    if (existente?.activo) throw new ReglaDeNegocioError("Este usuario ya está registrado");
+    const usuario = existente ?? UsuarioAutorizado.crear({ ...datos, rol: "COLABORADOR" });
+    if (existente) {
+      existente.cambiarNombre(datos.nombre);
+      existente.cambiarRol("COLABORADOR");
+      existente.activar();
+    }
+    await this.usuarios.guardar(usuario);
+    return UsuarioAutorizadoMapper.aDto(usuario);
+  }
+
+  async actualizar(
+    id: string,
+    datos: { nombre?: string | undefined; activo?: boolean | undefined },
+    actor: Actor,
+  ): Promise<UsuarioAutorizadoDto> {
+    this.exigirDirectora(actor);
+    const usuario = await this.usuarios.buscarPorId(id);
+    if (!usuario || usuario.rol !== "COLABORADOR") throw new NoEncontradoError("Colaborador no encontrado");
+    if (usuario.id === actor.id && datos.activo === false) {
+      throw new NoAutorizadoError("No puedes desactivar tu propio acceso");
+    }
+    if (datos.nombre !== undefined) usuario.cambiarNombre(datos.nombre);
+    if (datos.activo === true) usuario.activar();
+    if (datos.activo === false) usuario.desactivar();
+    await this.usuarios.guardar(usuario);
+    return UsuarioAutorizadoMapper.aDto(usuario);
   }
 
   private exigirDirectora(actor: Actor): void {
