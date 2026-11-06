@@ -77,12 +77,15 @@ export class UsuarioAutorizado {
     this.props.actualizadoEn = ahora;
   }
 
-  sincronizarPerfilWeb(nombre: string, rol: Rol, ahora = new Date()): void {
+  /** Actualiza nombre y rol con los del sistema principal. Devuelve true si algo cambió. */
+  sincronizarPerfilWeb(nombre: string, rol: Rol, ahora = new Date()): boolean {
     const nombreNormalizado = nombre.trim();
     if (!nombreNormalizado) throw new ValidacionError("El nombre es obligatorio", ["nombre"]);
+    if (this.props.nombre === nombreNormalizado && this.props.rol === rol) return false;
     this.props.nombre = nombreNormalizado;
     this.props.rol = rol;
     this.props.actualizadoEn = ahora;
+    return true;
   }
 
   activar(ahora = new Date()): void {

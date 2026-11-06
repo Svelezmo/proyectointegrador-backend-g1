@@ -18,6 +18,8 @@ export interface PropsPublicacion {
   cuerpo: string;
   proposito: string | null;
   etiqueta: string | null;
+  /** URL de la imagen principal (se guarda como Evidencia de tipo IMAGEN). */
+  imagenUrl: string | null;
   estado: EstadoPublicacion;
   estaActivo: boolean;
   autorId: string;
@@ -33,6 +35,7 @@ export interface DatosNuevaPublicacion {
   resumen?: string | null | undefined;
   proposito?: string | null | undefined;
   etiqueta?: string | null | undefined;
+  imagenUrl?: string | null | undefined;
   estado?: "BORRADOR" | "PENDIENTE_APROBACION" | undefined;
 }
 
@@ -41,7 +44,8 @@ type CampoEditable =
   | "resumen"
   | "cuerpo"
   | "proposito"
-  | "etiqueta";
+  | "etiqueta"
+  | "imagenUrl";
 /** Campos que se pueden editar; los que llegan como undefined se ignoran. */
 export type CambiosPublicacion = { [K in CampoEditable]?: PropsPublicacion[K] | undefined };
 
@@ -59,6 +63,7 @@ export class Publicacion {
       resumen: datos.resumen ?? null,
       proposito: datos.proposito ?? null,
       etiqueta: datos.etiqueta ?? null,
+      imagenUrl: datos.imagenUrl ?? null,
       estado: datos.estado ?? "BORRADOR",
       estaActivo: false,
       autorId: autor.id,

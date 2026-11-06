@@ -27,6 +27,7 @@ describe("PublicacionService", () => {
       url,
     );
     assert.equal(repo.imagenes.get(dto.id), url);
+    assert.equal(dto.imagenUrl, url);
     assert.equal(repo.datos.get(dto.id)?.autorId, colaborador.id);
   });
 
@@ -42,7 +43,7 @@ describe("PublicacionService", () => {
     await assert.rejects(service.obtenerPublicada(borrador.id), NoEncontradoError);
   });
 
-  test("la gestión muestra solo borradores propios a colaboradores y todo a directora", async () => {
+  test("la gestión muestra a cada colaborador todas sus noticias (no las ajenas) y todo a la directora", async () => {
     await service.crear(
       { titulo: "Mi borrador", cuerpo: "Texto", estado: "BORRADOR" },
       colaborador,
@@ -57,9 +58,10 @@ describe("PublicacionService", () => {
     );
 
     const visiblesAlAutor = await service.listarGestion(colaborador);
-    assert.deepEqual(visiblesAlAutor.map(item => item.titulo), ["Mi borrador"]);
+    assert.deepEqual(visiblesAlAutor.map(item => item.titulo).sort(), ["En revisión", "Mi borrador"]);
     assert.equal((await service.listarGestion(directora)).length, 3);
-    await assert.rejects(service.obtenerGestion(pendiente.id, colaborador), NoEncontradoError);
+    assert.equal((await service.obtenerGestion(pendiente.id, colaborador)).estado, "PENDIENTE_APROBACION");
+    await assert.rejects(service.obtenerGestion(pendiente.id, comunicaciones), NoEncontradoError);
   });
 
   test("filtra por etiqueta sin importar mayúsculas y lista etiquetas solo de lo publicado", async () => {
@@ -84,5 +86,30 @@ describe("PublicacionService", () => {
     assert.equal(publicada.estado, "PUBLICADA");
     assert.equal(publicada.estaActivo, true);
     assert.equal((await service.listarPublicadas({ pagina: 1, limite: 10 })).total, 1);
+  });
+
+  test("editar con otra imagen reemplaza la anterior y la web pública la recibe", async () => {
+    const primera = "https://res.cloudinary.com/upnews/image/upload/v1/a.jpg";
+    const segunda = "https://res.cloudinary.com/upnews/image/upload/v1/b.jpg";
+    const creada = await service.crear({ titulo: "Con foto", cuerpo: "Texto", estado: "BORRADOR" }, colaborador, primera);
+
+    await service.editar(creada.id, { titulo: "Con foto nueva" }, colaborador, segunda);
+    await service.aprobarYActivar(creada.id, directora);
+
+    assert.equal(repo.imagenes.get(creada.id), segunda);
+    assert.equal((await service.obtenerPublicada(creada.id)).imagenUrl, segunda);
+  });
+
+  test("editar sin imagen conserva la imagen actual", async () => {
+    const url = "https://res.cloudinary.com/upnews/image/upload/v1/a.jpg";
+    const creada = await service.crear({ titulo: "Con foto", cuerpo: "Texto", estado: "BORRADOR" }, colaborador, url);
+    await service.editar(creada.id, { cuerpo: "Texto corregido" }, colaborador);
+    assert.equal(repo.imagenes.get(creada.id), url);
+  });
+
+  test("el autor envía su borrador a aprobación", async () => {
+    const creada = await service.crear({ titulo: "Para revisar", cuerpo: "Texto", estado: "BORRADOR" }, colaborador);
+    const enviada = await service.enviarAAprobacion(creada.id, colaborador);
+    assert.equal(enviada.estado, "PENDIENTE_APROBACION");
   });
 });

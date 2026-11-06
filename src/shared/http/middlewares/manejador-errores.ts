@@ -35,6 +35,17 @@ export const manejadorErrores: ErrorRequestHandler = (error, _req, res, _next) =
     res.status(estado).json(cuerpo);
     return;
   }
+  // Errores conocidos de Prisma (sin importar Prisma aquí: se reconocen por nombre y código).
+  if (error?.name === "PrismaClientKnownRequestError") {
+    if (error.code === "P2002") {
+      res.status(409).json({ error: "Ya existe un registro con esos datos", codigo: "DUPLICADO" });
+      return;
+    }
+    if (error.code === "P2025") {
+      res.status(404).json({ error: "El registro no existe", codigo: "NO_ENCONTRADO" });
+      return;
+    }
+  }
   if (error?.type === "entity.parse.failed") {
     res.status(400).json({ error: "JSON inválido" });
     return;

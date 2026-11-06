@@ -15,18 +15,14 @@ export const colaborador: Actor = { id: "00000000-0000-4000-8000-000000000003", 
 
 export class PublicacionRepositoryEnMemoria implements PublicacionRepository {
   readonly datos = new Map<string, Publicacion>();
+  /** Imagen guardada por publicación (simula la tabla evidencia). */
   readonly imagenes = new Map<string, string>();
 
   async guardar(publicacion: Publicacion) {
     this.datos.set(publicacion.id, publicacion);
-  }
-  async guardarConEvidencia(publicacion: Publicacion, imagenUrl: string) {
-    this.datos.set(publicacion.id, publicacion);
-    this.imagenes.set(publicacion.id, imagenUrl);
-  }
-  async actualizarConEvidencia(publicacion: Publicacion, imagenUrl: string) {
-    this.datos.set(publicacion.id, publicacion);
-    this.imagenes.set(publicacion.id, imagenUrl);
+    const imagenUrl = publicacion.aProps().imagenUrl;
+    if (imagenUrl) this.imagenes.set(publicacion.id, imagenUrl);
+    else this.imagenes.delete(publicacion.id);
   }
   async buscarPorId(id: string) {
     return this.datos.get(id) ?? null;
@@ -36,6 +32,7 @@ export class PublicacionRepositoryEnMemoria implements PublicacionRepository {
   }
   async eliminar(id: string) {
     this.datos.delete(id);
+    this.imagenes.delete(id);
   }
   async listarPublicadas({ pagina, limite, etiqueta }: { pagina: number; limite: number; etiqueta?: string | undefined }) {
     const publicadas = [...this.datos.values()].filter(

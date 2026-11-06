@@ -73,18 +73,20 @@ npm run dev            # http://127.0.0.1:3000
 | `GET /health` | Estado del servidor y la base |
 | `GET /api/publicaciones?pagina=1&limite=10&etiqueta=salud` | Noticias aprobadas y activas, más recientes primero |
 | `GET /api/publicaciones/etiquetas` | Etiquetas de las noticias publicadas (filtros de la web) |
-| `GET /api/publicaciones/:id` | Una noticia publicada |
+| `GET /api/publicaciones/:id` | Una noticia publicada (incluye `imagenUrl`) |
+| `GET /api/contacto` | Información de contacto de la fundación (pública, para el pie de página) |
 | `POST /api/gestion/upload-signature` | Firma una subida directa a Cloudinary para la web; requiere `Authorization: Bearer <token>` |
 | `POST /api/miniapp/upload-signature` | Firma una subida para una Mini App autenticada con `X-Telegram-Init-Data` |
 | `POST /api/miniapp/publicaciones` | Guarda una noticia de Mini App (borrador o pendiente) y enlaza su imagen |
 | `POST /api/auth/telegram-login` | Valida `{ "initData": "..." }` y confirma el acceso del usuario autorizado |
 | `GET, POST, PATCH, DELETE /api/gestion/publicaciones...` | CRUD, aprobación y activación; requiere `Authorization: Bearer <token>` con rol `ADMIN` o `TALLERISTA` |
+| `POST /api/gestion/publicaciones/:id/enviar` | El autor envía su borrador a aprobación |
 | `POST /api/gestion/publicaciones/:id/aprobar-y-activar` | Aprueba y activa directamente en una acción (solo directora) |
 | `GET, POST, PATCH, DELETE /api/gestion/usuarios...` | Gestión de colaboradores (solo directora); DELETE desactiva para preservar el historial |
 | `GET, POST, PATCH, DELETE /api/gestion/contactos...` | Gestión de información de contacto tipada (solo directora) |
 | `POST /telegram/webhook` | Solo Telegram (protegido con `TELEGRAM_WEBHOOK_SECRET`) |
 
-Cada solicitud a `/api/gestion/*` consulta `AUTH_PERFIL_URL` con el token Bearer. Solo se aceptan los roles `ADMIN` (equivale a `DIRECTORA`) y `TALLERISTA` (equivale a `COLABORADOR`); los demás roles reciben 403. El token inválido o expirado recibe 401. El ID externo se asocia a un usuario local para conservar la autoría de las publicaciones. `/api/miniapp/*` y el bot siguen autenticándose con Telegram; la API `/api/publicaciones` permanece pública y de solo lectura.
+Cada solicitud a `/api/gestion/*` valida el token Bearer con `AUTH_PERFIL_URL`; un token ya validado se reutiliza durante 60 s (se guarda solo su hash) para no depender del backend principal en cada petición. Solo se aceptan los roles `ADMIN` (equivale a `DIRECTORA`) y `TALLERISTA` (equivale a `COLABORADOR`); los demás roles reciben 403. El token inválido o expirado recibe 401. El ID externo se asocia a un usuario local para conservar la autoría de las publicaciones. `/api/miniapp/*` y el bot siguen autenticándose con Telegram; la API `/api/publicaciones` permanece pública y de solo lectura.
 
 ### Consumo desde navegador
 
@@ -102,7 +104,7 @@ Las rutas de gestión requieren `Authorization: Bearer <token>` en cada petició
 
 | Método y ruta | Body | Qué hace |
 |---|---|---|
-| `GET /api/gestion/publicaciones` | Sin body | Lista noticias gestionables: ADMIN ve todas; TALLERISTA ve sus borradores. |
+| `GET /api/gestion/publicaciones` | Sin body | Lista noticias gestionables: ADMIN ve todas; TALLERISTA ve todas las suyas (solo puede editar o borrar sus borradores). |
 | `POST /api/gestion/upload-signature` | Sin body | Devuelve parámetros firmados para subir directamente un archivo de imagen a Cloudinary. |
 | `POST /api/gestion/publicaciones` | `{ "titulo": "...", "cuerpo": "...", "resumen?": "...", "proposito?": "...", "etiqueta?": "...", "estado?": "BORRADOR", "imagenUrl?": "https://..." }` | Crea una noticia como borrador o pendiente de aprobación. |
 | `GET /api/gestion/publicaciones/:id` | `id` UUID en la ruta | Obtiene una noticia y sus datos internos si el actor tiene acceso. |

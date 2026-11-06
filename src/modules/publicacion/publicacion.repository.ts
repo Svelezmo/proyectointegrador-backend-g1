@@ -10,13 +10,14 @@ import type { Publicacion } from "./publicacion.entity.js";
  * La implementación real está en publicacion.prisma.repository.ts.
  */
 export interface PublicacionRepository {
-  /** Inserta o actualiza la publicación completa. */
+  /**
+   * Inserta o actualiza la publicación completa, incluida su imagen principal:
+   * si la imagen cambió, reemplaza la evidencia anterior por la nueva (de forma atómica).
+   */
   guardar(publicacion: Publicacion): Promise<void>;
-  /** Inserta una publicación y su evidencia de imagen de forma atómica. */
-  guardarConEvidencia(publicacion: Publicacion, imagenUrl: string): Promise<void>;
-  actualizarConEvidencia(publicacion: Publicacion, imagenUrl: string): Promise<void>;
   buscarPorId(id: string): Promise<Publicacion | null>;
   listarGestion(autorId?: string): Promise<Publicacion[]>;
+  /** Elimina la publicación y las evidencias que solo le pertenecían a ella. */
   eliminar(id: string): Promise<void>;
   listarPublicadas(filtro: Paginacion & { etiqueta?: string | undefined }): Promise<{ items: Publicacion[]; total: number }>;
   /** Etiquetas distintas de las publicaciones visibles (para los filtros de la web). */

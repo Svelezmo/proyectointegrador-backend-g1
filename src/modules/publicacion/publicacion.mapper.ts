@@ -2,6 +2,11 @@ import type { Publicacion as PublicacionModelo } from "../../generated/prisma/cl
 import { Publicacion } from "./publicacion.entity.js";
 import type { PublicacionInternaDto, PublicacionPublicaDto } from "./publicacion.dto.js";
 
+/** Fila de publicación con su imagen principal (la evidencia de tipo IMAGEN más reciente). */
+export type PublicacionConImagen = PublicacionModelo & {
+  evidencias?: { evidencia: { url: string } }[];
+};
+
 /**
  * MAPPER: traduce entre las tres "formas" de una publicación, para que ninguna capa
  * dependa de la forma de otra:
@@ -10,7 +15,7 @@ import type { PublicacionInternaDto, PublicacionPublicaDto } from "./publicacion
  */
 export const PublicacionMapper = {
   /** Base de datos -> dominio */
-  aEntidad(fila: PublicacionModelo): Publicacion {
+  aEntidad(fila: PublicacionConImagen): Publicacion {
     return Publicacion.reconstruir({
       id: fila.id,
       titulo: fila.titulo,
@@ -18,6 +23,7 @@ export const PublicacionMapper = {
       cuerpo: fila.cuerpo,
       proposito: fila.proposito,
       etiqueta: fila.etiqueta,
+      imagenUrl: fila.evidencias?.[0]?.evidencia.url ?? null,
       estado: fila.estado,
       estaActivo: fila.estaActivo,
       autorId: fila.autorId,
@@ -28,9 +34,10 @@ export const PublicacionMapper = {
     });
   },
 
-  /** Dominio -> base de datos */
+  /** Dominio -> base de datos (solo columnas de la tabla publicacion). */
   aPersistencia(publicacion: Publicacion): PublicacionModelo {
-    return { ...publicacion.aProps() };
+    const { imagenUrl: _imagenUrl, ...columnas } = publicacion.aProps();
+    return columnas;
   },
 
   /** Dominio -> respuesta pública (página web) */
@@ -42,6 +49,7 @@ export const PublicacionMapper = {
       resumen: p.resumen,
       cuerpo: p.cuerpo,
       etiqueta: p.etiqueta,
+      imagenUrl: p.imagenUrl,
       publicadaEn: p.publicadaEn?.toISOString() ?? null,
     };
   },

@@ -1,11 +1,23 @@
 import type { Actor } from "../../shared/domain/actor.js";
 import { NoAutorizadoError, NoEncontradoError } from "../../shared/domain/errores.js";
-import type { InformacionContactoDto, InformacionContactoRespuesta } from "./informacion-contacto.dto.js";
+import type {
+  InformacionContactoDto,
+  InformacionContactoPublicaDto,
+  InformacionContactoRespuesta,
+} from "./informacion-contacto.dto.js";
 import { InformacionContacto } from "./informacion-contacto.entity.js";
 import type { InformacionContactoRepository } from "./informacion-contacto.repository.js";
 
 export class InformacionContactoService {
   constructor(private readonly contactos: InformacionContactoRepository) {}
+
+  /** Contacto de la fundación para la página web (público, solo lectura). */
+  async listarPublico(): Promise<InformacionContactoPublicaDto[]> {
+    return (await this.contactos.listar()).map(contacto => {
+      const { nombre, tipo, informacion } = contacto.aProps();
+      return { nombre, tipo, informacion };
+    });
+  }
 
   async listar(actor: Actor): Promise<InformacionContactoRespuesta[]> {
     this.exigirDirectora(actor);

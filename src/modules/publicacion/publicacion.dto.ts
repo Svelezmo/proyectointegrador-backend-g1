@@ -54,6 +54,8 @@ export interface PublicacionPublicaDto {
   resumen: string | null;
   cuerpo: string;
   etiqueta: string | null;
+  /** Imagen principal (Cloudinary) o null si la noticia no tiene foto. */
+  imagenUrl: string | null;
   publicadaEn: string | null;
 }
 

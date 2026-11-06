@@ -43,31 +43,24 @@ export class PublicacionService {
   // ── Casos de uso internos (API de gestión y bot) ────────
 
   async crear(dto: CrearPublicacionDto, actor: Actor, imagenUrl?: string): Promise<PublicacionInternaDto> {
-    const publicacion = Publicacion.crear(dto, actor);
-    if (imagenUrl) {
-      await this.publicaciones.guardarConEvidencia(publicacion, imagenUrl);
-    } else {
-      await this.publicaciones.guardar(publicacion);
-    }
+    const publicacion = Publicacion.crear({ ...dto, imagenUrl }, actor);
+    await this.publicaciones.guardar(publicacion);
     return PublicacionMapper.aInternaDto(publicacion);
   }
 
+  /**
+   * La directora ve todas las noticias; los demás, todas las suyas (en cualquier estado),
+   * para que puedan seguir lo que enviaron a revisión. Editar o eliminar sigue limitado
+   * a sus borradores (lo decide la entity / eliminar()).
+   */
   async listarGestion(actor: Actor): Promise<PublicacionInternaDto[]> {
-    const items = await this.publicaciones.listarGestion(
-      actor.rol === "DIRECTORA" ? undefined : actor.id,
-    );
-    return items
-      .filter(publicacion =>
-        actor.rol === "DIRECTORA" ||
-        (publicacion.autorId === actor.id && publicacion.estado === "BORRADOR"),
-      )
-      .map(PublicacionMapper.aInternaDto);
+    const items = await this.publicaciones.listarGestion(actor.rol === "DIRECTORA" ? undefined : actor.id);
+    return items.map(PublicacionMapper.aInternaDto);
   }
 
   async obtenerGestion(id: string, actor: Actor): Promise<PublicacionInternaDto> {
     const publicacion = await this.publicaciones.buscarPorId(id);
-    if (!publicacion) throw new NoEncontradoError("Publicación no encontrada");
-    if (actor.rol !== "DIRECTORA" && (publicacion.autorId !== actor.id || publicacion.estado !== "BORRADOR")) {
+    if (!publicacion || (actor.rol !== "DIRECTORA" && publicacion.autorId !== actor.id)) {
       throw new NoEncontradoError("Publicación no encontrada");
     }
     return PublicacionMapper.aInternaDto(publicacion);
@@ -81,12 +74,8 @@ export class PublicacionService {
   ): Promise<PublicacionInternaDto> {
     const publicacion = await this.publicaciones.buscarPorId(id);
     if (!publicacion) throw new NoEncontradoError("Publicación no encontrada");
-    publicacion.editar(dto, actor);
-    if (imagenUrl) {
-      await this.publicaciones.actualizarConEvidencia(publicacion, imagenUrl);
-    } else {
-      await this.publicaciones.guardar(publicacion);
-    }
+    publicacion.editar({ ...dto, ...(imagenUrl ? { imagenUrl } : {}) }, actor);
+    await this.publicaciones.guardar(publicacion);
     return PublicacionMapper.aInternaDto(publicacion);
   }
 

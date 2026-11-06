@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { z } from "zod";
 import type { Actor, Rol } from "../../shared/domain/actor.js";
 import {
@@ -18,20 +19,58 @@ const perfilExternoDto = z.object({
 
 type FetchPerfil = (input: string, init?: RequestInit) => Promise<Response>;
 
+export interface OpcionesPerfilExterno {
+  /** Cuánto tiempo se reutiliza un token ya validado. 0 desactiva la caché. */
+  cacheMs?: number;
+  /** Tiempo máximo esperando al backend principal (en Render gratuito puede tardar en despertar). */
+  timeoutMs?: number;
+  /** Reloj inyectable para pruebas. */
+  ahora?: () => number;
+}
+
+const MAXIMO_TOKENS_EN_CACHE = 500;
+
+/**
+ * Valida el Bearer de la web contra el backend principal (/api/auth/perfil) y lo traduce a un Actor.
+ *
+ * Para no depender de ese servidor en CADA petición, un token válido se recuerda durante `cacheMs`
+ * (60 s por defecto). Solo se guarda el hash SHA-256 del token, nunca el token en claro.
+ */
 export class PerfilExternoAuthService implements AutenticacionWebPort {
+  private readonly cache = new Map<string, { actor: Actor; expiraEn: number }>();
+  private readonly cacheMs: number;
+  private readonly timeoutMs: number;
+  private readonly ahora: () => number;
+
   constructor(
     private readonly usuarios: UsuarioAutorizadoRepository,
     private readonly perfilUrl: string,
     private readonly solicitarPerfil: FetchPerfil = fetch,
-  ) {}
+    opciones: OpcionesPerfilExterno = {},
+  ) {
+    this.cacheMs = opciones.cacheMs ?? 60_000;
+    this.timeoutMs = opciones.timeoutMs ?? 30_000;
+    this.ahora = opciones.ahora ?? Date.now;
+  }
 
   async autenticar(token: string): Promise<Actor> {
+    const clave = createHash("sha256").update(token).digest("hex");
+    const enCache = this.cache.get(clave);
+    if (enCache && enCache.expiraEn > this.ahora()) return enCache.actor;
+    this.cache.delete(clave);
+
+    const actor = await this.validarConBackendPrincipal(token);
+    this.recordar(clave, actor);
+    return actor;
+  }
+
+  private async validarConBackendPrincipal(token: string): Promise<Actor> {
     let respuesta: Response;
     try {
       respuesta = await this.solicitarPerfil(this.perfilUrl, {
         method: "GET",
         headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-        signal: AbortSignal.timeout(10_000),
+        signal: AbortSignal.timeout(this.timeoutMs),
         redirect: "error",
       });
     } catch {
@@ -70,16 +109,27 @@ export class PerfilExternoAuthService implements AutenticacionWebPort {
     if (!nombre) {
       throw new ServicioAutenticacionExternaError("El perfil no contiene un nombre válido");
     }
-    let usuario = await this.usuarios.buscarPorIdUsuarioExterno(idUsuarioExterno);
-    if (usuario && !usuario.activo) {
+    const existente = await this.usuarios.buscarPorIdUsuarioExterno(idUsuarioExterno);
+    if (existente && !existente.activo) {
       throw new NoAutorizadoError("El acceso de este usuario está desactivado en UP News");
     }
-    if (usuario) {
-      usuario.sincronizarPerfilWeb(nombre, rol);
-    } else {
-      usuario = UsuarioAutorizado.crear({ idUsuarioExterno, nombre, rol });
+    // Solo se escribe en la base si el usuario es nuevo o cambió su nombre o rol.
+    if (!existente) {
+      const nuevo = UsuarioAutorizado.crear({ idUsuarioExterno, nombre, rol });
+      await this.usuarios.guardar(nuevo);
+      return nuevo.aActor();
     }
-    await this.usuarios.guardar(usuario);
-    return usuario.aActor();
+    if (existente.sincronizarPerfilWeb(nombre, rol)) await this.usuarios.guardar(existente);
+    return existente.aActor();
+  }
+
+  private recordar(clave: string, actor: Actor): void {
+    if (this.cacheMs <= 0) return;
+    if (this.cache.size >= MAXIMO_TOKENS_EN_CACHE) {
+      // Quita la entrada más antigua (los Map conservan el orden de inserción).
+      const masAntigua = this.cache.keys().next().value;
+      if (masAntigua !== undefined) this.cache.delete(masAntigua);
+    }
+    this.cache.set(clave, { actor, expiraEn: this.ahora() + this.cacheMs });
   }
 }

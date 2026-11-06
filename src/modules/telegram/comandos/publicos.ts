@@ -7,7 +7,7 @@ export const AYUDA = [
   "Publicaciones",
   "/nueva Título | Cuerpo | etiqueta(opcional) — crea un borrador",
   "/enviar <id> — envía tu borrador a aprobación",
-  "/publicar <id> — aprueba y publica (solo directora)",
+  "/publicar <id> — aprueba (solo directora); luego se activa en la web o la Mini App",
   "/archivar <id> — retira una publicación",
   "/pendientes — publicaciones esperando aprobación",
   "/ultimas — últimas publicaciones visibles en la web",

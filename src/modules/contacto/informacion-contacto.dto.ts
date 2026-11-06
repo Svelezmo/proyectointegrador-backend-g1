@@ -10,6 +10,9 @@ export const informacionContactoDto = z.object({
 
 export const idContactoDto = z.object({ id: z.uuid() });
 export type InformacionContactoDto = z.output<typeof informacionContactoDto>;
+/** Lo que ve la página web: sin quién lo actualizó. */
+export type InformacionContactoPublicaDto = InformacionContactoDto;
+
 export interface InformacionContactoRespuesta extends InformacionContactoDto {
   id: string;
   actualizadoEn: string;

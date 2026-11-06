@@ -4,6 +4,18 @@ import type { Publicacion } from "./publicacion.entity.js";
 import { PublicacionMapper } from "./publicacion.mapper.js";
 import type { PublicacionRepository } from "./publicacion.repository.js";
 
+/** Trae junto a cada publicación su imagen principal: la evidencia IMAGEN más reciente. */
+const CON_IMAGEN = {
+  evidencias: {
+    where: { evidencia: { tipo: "IMAGEN" as const } },
+    select: { evidencia: { select: { url: true } } },
+    orderBy: { evidencia: { creadoEn: "desc" as const } },
+    take: 1,
+  },
+};
+
+type Transaccion = Parameters<Parameters<PrismaClient["$transaction"]>[0]>[0];
+
 /**
  * REPOSITORY (implementación con Prisma). Es el único archivo del módulo que habla con la base.
  * Recibe entidades, usa el mapper para convertirlas en filas y viceversa.
@@ -13,49 +25,33 @@ export class PrismaPublicacionRepository implements PublicacionRepository {
 
   async guardar(publicacion: Publicacion): Promise<void> {
     const { id, creadoEn: _creadoEn, ...datos } = PublicacionMapper.aPersistencia(publicacion);
-    await this.db.publicacion.upsert({
-      where: { id },
-      create: { id, ...datos },
-      update: datos,
-    });
-  }
-
-  async guardarConEvidencia(publicacion: Publicacion, imagenUrl: string): Promise<void> {
-    const { id, creadoEn: _creadoEn, ...datos } = PublicacionMapper.aPersistencia(publicacion);
+    const imagenUrl = publicacion.aProps().imagenUrl;
     await this.db.$transaction(async tx => {
-      await tx.publicacion.upsert({
-        where: { id },
-        create: { id, ...datos },
-        update: datos,
-      });
-      const evidencia = await tx.evidencia.create({
-        data: { tipo: "IMAGEN", url: imagenUrl },
-      });
-      await tx.publicacionEvidencia.create({
-        data: { publicacionId: id, evidenciaId: evidencia.id },
-      });
+      await tx.publicacion.upsert({ where: { id }, create: { id, ...datos }, update: datos });
+      await this.sincronizarImagen(tx, id, imagenUrl);
     });
-  }
-
-  async actualizarConEvidencia(publicacion: Publicacion, imagenUrl: string): Promise<void> {
-    await this.guardarConEvidencia(publicacion, imagenUrl);
   }
 
   async buscarPorId(id: string): Promise<Publicacion | null> {
-    const fila = await this.db.publicacion.findUnique({ where: { id } });
+    const fila = await this.db.publicacion.findUnique({ where: { id }, include: CON_IMAGEN });
     return fila ? PublicacionMapper.aEntidad(fila) : null;
   }
 
   async listarGestion(autorId?: string): Promise<Publicacion[]> {
     const filas = await this.db.publicacion.findMany({
       ...(autorId ? { where: { autorId } } : {}),
+      include: CON_IMAGEN,
       orderBy: { actualizadoEn: "desc" },
     });
     return filas.map(PublicacionMapper.aEntidad);
   }
 
   async eliminar(id: string): Promise<void> {
-    await this.db.publicacion.delete({ where: { id } });
+    await this.db.$transaction(async tx => {
+      const enlaces = await tx.publicacionEvidencia.findMany({ where: { publicacionId: id }, select: { evidenciaId: true } });
+      await tx.publicacion.delete({ where: { id } });
+      await this.borrarEvidenciasHuerfanas(tx, enlaces.map(enlace => enlace.evidenciaId));
+    });
   }
 
   async listarPublicadas({ pagina, limite, etiqueta }: Paginacion & { etiqueta?: string | undefined }) {
@@ -67,6 +63,7 @@ export class PrismaPublicacionRepository implements PublicacionRepository {
     const [filas, total] = await this.db.$transaction([
       this.db.publicacion.findMany({
         where,
+        include: CON_IMAGEN,
         orderBy: { publicadaEn: "desc" },
         skip: (pagina - 1) * limite,
         take: limite,
@@ -89,9 +86,38 @@ export class PrismaPublicacionRepository implements PublicacionRepository {
   async listarPorEstado(estado: Publicacion["estado"], limite: number): Promise<Publicacion[]> {
     const filas = await this.db.publicacion.findMany({
       where: { estado },
+      include: CON_IMAGEN,
       orderBy: { actualizadoEn: "desc" },
       take: limite,
     });
     return filas.map(PublicacionMapper.aEntidad);
+  }
+
+  /**
+   * Deja como imagen de la publicación exactamente `imagenUrl`:
+   * si ya es la actual no hace nada; si cambió, quita la anterior y registra la nueva.
+   */
+  private async sincronizarImagen(tx: Transaccion, publicacionId: string, imagenUrl: string | null): Promise<void> {
+    const actuales = await tx.publicacionEvidencia.findMany({
+      where: { publicacionId, evidencia: { tipo: "IMAGEN" } },
+      select: { evidenciaId: true, evidencia: { select: { url: true } } },
+    });
+    if (actuales.length === 1 && actuales[0]!.evidencia.url === imagenUrl) return;
+    if (actuales.length === 0 && imagenUrl === null) return;
+
+    const anteriores = actuales.map(enlace => enlace.evidenciaId);
+    await tx.publicacionEvidencia.deleteMany({ where: { publicacionId, evidenciaId: { in: anteriores } } });
+    await this.borrarEvidenciasHuerfanas(tx, anteriores);
+
+    if (imagenUrl) {
+      const evidencia = await tx.evidencia.create({ data: { tipo: "IMAGEN", url: imagenUrl } });
+      await tx.publicacionEvidencia.create({ data: { publicacionId, evidenciaId: evidencia.id } });
+    }
+  }
+
+  /** Borra las evidencias de la lista que ya no estén asociadas a ninguna publicación. */
+  private async borrarEvidenciasHuerfanas(tx: Transaccion, evidenciaIds: string[]): Promise<void> {
+    if (evidenciaIds.length === 0) return;
+    await tx.evidencia.deleteMany({ where: { id: { in: evidenciaIds }, publicaciones: { none: {} } } });
   }
 }

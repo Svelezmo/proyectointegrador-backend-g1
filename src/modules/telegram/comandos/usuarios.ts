@@ -26,5 +26,5 @@ export function registrarComandosUsuarios(bot: Composer<ContextoUpNews>, service
 }
 
 function linea(u: UsuarioAutorizadoDto): string {
-  return `${u.activo ? "✅" : "⛔"} ${u.nombre} — ${u.rol} — ${u.telegramId}`;
+  return `${u.activo ? "✅" : "⛔"} ${u.nombre} — ${u.rol} — ${u.telegramId ?? "usuario web"}`;
 }

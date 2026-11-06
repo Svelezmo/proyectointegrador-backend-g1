@@ -6,6 +6,7 @@ import { PerfilExternoAuthService } from "./modules/auth/perfil-externo-auth.ser
 import { GestionController } from "./modules/gestion/gestion.controller.js";
 import { PrismaInformacionContactoRepository } from "./modules/contacto/informacion-contacto.prisma.repository.js";
 import { InformacionContactoService } from "./modules/contacto/informacion-contacto.service.js";
+import { InformacionContactoController } from "./modules/contacto/informacion-contacto.controller.js";
 import { CloudinaryStorageAdapter } from "./modules/almacenamiento/cloudinary-storage.adapter.js";
 import { MiniAppController } from "./modules/miniapp/miniapp.controller.js";
 import { MiniAppService } from "./modules/miniapp/miniapp.service.js";
@@ -57,6 +58,7 @@ if (env.TELEGRAM_BOT_TOKEN) {
 
 // Entradas: controllers HTTP y bot de Telegram
 const publicacionController = new PublicacionController(publicacionService);
+const contactoController = new InformacionContactoController(informacionContactoService);
 let telegramAuthController: TelegramAuthController | undefined;
 let miniAppController: MiniAppController | undefined;
 const gestionController = new GestionController(
@@ -87,6 +89,7 @@ export const contenedor = {
   publicacionService,
   usuarioAutorizadoService,
   publicacionController,
+  contactoController,
   telegramAuthController,
   miniAppController,
   gestionController,

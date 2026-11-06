@@ -10,6 +10,7 @@ const usarWebhook = Boolean(bot && env.PUBLIC_URL && env.TELEGRAM_WEBHOOK_SECRET
 
 const app = crearApp({
   publicacionController: contenedor.publicacionController,
+  contactoController: contenedor.contactoController,
   telegramAuthController: contenedor.telegramAuthController,
   miniAppController: contenedor.miniAppController,
   gestionController: contenedor.gestionController,

@@ -28,6 +28,8 @@ export const swaggerSpec = swaggerJSDoc({
       { name: "Publicaciones", description: "Noticias visibles en la página web" },
       { name: "Mini App", description: "Subida firmada de imágenes y creación de borradores autenticadas con Telegram" },
       { name: "Gestión", description: "CRUD web de noticias, colaboradores e información de contacto con token Bearer" },
+      { name: "Contacto", description: "Información de contacto pública de la fundación" },
+      { name: "Autenticación", description: "Validación de la sesión de la Mini App de Telegram" },
       { name: "Sistema", description: "Estado del servicio" },
     ],
     components: {
@@ -41,6 +43,12 @@ export const swaggerSpec = swaggerJSDoc({
             resumen: { type: "string", nullable: true, example: "Una jornada para aprender y compartir." },
             cuerpo: { type: "string", example: "Cada participante preparó su propia receta..." },
             etiqueta: { type: "string", nullable: true, example: "Talleres" },
+            imagenUrl: {
+              type: "string",
+              format: "uri",
+              nullable: true,
+              example: "https://res.cloudinary.com/upnews/image/upload/v1/upnews/foto.jpg",
+            },
             publicadaEn: { type: "string", format: "date-time", nullable: true },
           },
         },
@@ -51,6 +59,14 @@ export const swaggerSpec = swaggerJSDoc({
             total: { type: "integer", example: 12 },
             pagina: { type: "integer", example: 1 },
             limite: { type: "integer", example: 10 },
+          },
+        },
+        ContactoPublico: {
+          type: "object",
+          properties: {
+            nombre: { type: "string", example: "WhatsApp" },
+            tipo: { type: "string", enum: ["RED_SOCIAL", "NUMERO_CONTACTO", "DIRECCION"] },
+            informacion: { type: "string", example: "+57 300 000 0000" },
           },
         },
         Error: {

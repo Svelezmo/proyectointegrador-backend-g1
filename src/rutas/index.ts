@@ -2,10 +2,12 @@ import cors from "cors";
 import { Router, type RequestHandler } from "express";
 import { rateLimit } from "express-rate-limit";
 import type { TelegramAuthController } from "../modules/auth/telegram-auth.controller.js";
+import type { InformacionContactoController } from "../modules/contacto/informacion-contacto.controller.js";
 import type { MiniAppController } from "../modules/miniapp/miniapp.controller.js";
 import type { PublicacionController } from "../modules/publicacion/publicacion.controller.js";
 import type { GestionController } from "../modules/gestion/gestion.controller.js";
 import { RUTA_WEBHOOK } from "../modules/telegram/telegram.iniciar.js";
+import { crearRutasContacto } from "./contacto.rutas.js";
 import { crearRutasDocs } from "./docs.rutas.js";
 import { crearRutasAuth } from "./auth.rutas.js";
 import { crearRutasMiniApp } from "./miniapp.rutas.js";
@@ -16,6 +18,7 @@ import { crearRutasSalud } from "./salud.rutas.js";
 export interface DependenciasRutas {
   publicacionController: PublicacionController;
   telegramAuthController?: TelegramAuthController | undefined;
+  contactoController?: InformacionContactoController | undefined;
   miniAppController?: MiniAppController | undefined;
   gestionController?: GestionController | undefined;
   verificarSalud: () => Promise<void>;
@@ -30,6 +33,7 @@ export interface DependenciasRutas {
  *   GET  /api-docs, /api-docs.json   docs.rutas.ts (Swagger)
  *   POST /telegram/webhook           webhook del bot (solo producción)
  *   GET  /api/publicaciones/...      publicacion.rutas.ts
+ *   GET  /api/contacto               contacto.rutas.ts (público)
  *   POST /api/auth/telegram-login    auth.rutas.ts
  * CRUD  /api/gestion/...           gestion.rutas.ts (Bearer validado por el backend principal)
  *
@@ -62,7 +66,9 @@ export function crearRutas(deps: DependenciasRutas): Router {
   if (deps.gestionController) {
     api.use("/gestion", crearRutasGestion(deps.gestionController));
   }
-  // api.use("/contacto", crearRutasContacto(deps.contactoController));
+  if (deps.contactoController) {
+    api.use("/contacto", crearRutasContacto(deps.contactoController));
+  }
   router.use("/api", api);
 
   return router;

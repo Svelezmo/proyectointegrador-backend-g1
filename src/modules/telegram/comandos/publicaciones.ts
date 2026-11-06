@@ -29,7 +29,9 @@ export function registrarComandosPublicacion(bot: Composer<ContextoUpNews>, serv
 
   bot.command("publicar", async ctx => {
     const actualizada = await service.publicar(idDe(ctx), actorDe(ctx));
-    await ctx.reply(`Publicada en la web.\n\n${resumen(actualizada)}`);
+    await ctx.reply(
+      `Aprobada ✅\nPara que aparezca en la web, la directora debe activarla desde la web o la Mini App.\n\n${resumen(actualizada)}`,
+    );
   });
 
   bot.command("archivar", async ctx => {
@@ -43,7 +45,7 @@ export function registrarComandosPublicacion(bot: Composer<ContextoUpNews>, serv
   });
 
   bot.command("ultimas", async ctx => {
-    const { items } = await service.listarPublicadas({ pagina: 1, limite: 5 });
+    const { items } = await service.listarPublicadas({ pagina: 1, limite: 5 }); // solo las activas (visibles en la web)
     await ctx.reply(items.length ? items.map(p => `• ${p.titulo}\n  id: ${p.id}`).join("\n\n") : "Aún no hay publicaciones.");
   });
 }
@@ -53,7 +55,8 @@ function idDe(ctx: ContextoUpNews): string {
 }
 
 function resumen(p: PublicacionInternaDto): string {
-  return [`📰 ${p.titulo}`, `Estado: ${p.estado}`, p.etiqueta ? `Etiqueta: ${p.etiqueta}` : null, `id: ${p.id}`]
+  const estado = p.estado === "PUBLICADA" ? `PUBLICADA (${p.estaActivo ? "visible en la web" : "pendiente de activar"})` : p.estado;
+  return [`📰 ${p.titulo}`, `Estado: ${estado}`, p.etiqueta ? `Etiqueta: ${p.etiqueta}` : null, `id: ${p.id}`]
     .filter(Boolean)
     .join("\n");
 }

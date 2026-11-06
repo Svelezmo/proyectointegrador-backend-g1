@@ -71,6 +71,12 @@ export class GestionController {
     res.json(await this.publicaciones.editar(id, noticia, actor, imagenUrl));
   };
 
+  enviarAAprobacion = async (req: Request, res: Response): Promise<void> => {
+    const actor = await this.obtenerActor(req);
+    const { id } = validar(idPublicacionDto, req.params);
+    res.json(await this.publicaciones.enviarAAprobacion(id, actor));
+  };
+
   aprobarPublicacion = async (req: Request, res: Response): Promise<void> => {
     const actor = await this.obtenerActor(req);
     const { id } = validar(idPublicacionDto, req.params);

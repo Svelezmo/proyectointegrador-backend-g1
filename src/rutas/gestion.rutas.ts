@@ -138,6 +138,28 @@ export function crearRutasGestion(controller: GestionController): Router {
   router.delete("/publicaciones/:id", controller.eliminarPublicacion);
   /**
    * @openapi
+   * /api/gestion/publicaciones/{id}/enviar:
+   *   post:
+   *     tags: [Gestión]
+   *     summary: Envía un borrador propio a aprobación (pasa a PENDIENTE_APROBACION)
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema: { type: string, format: uuid }
+   *       - in: header
+   *         name: Authorization
+   *         required: false
+   *         description: Para clientes web. La Mini App usa X-Telegram-Init-Data.
+   *         schema: { type: string, example: "Bearer <token>" }
+   *     responses:
+   *       200: { description: Noticia enviada a aprobación }
+   *       403: { $ref: '#/components/responses/NoAutorizado' }
+   *       409: { description: Solo un borrador puede enviarse a aprobación }
+   */
+  router.post("/publicaciones/:id/enviar", controller.enviarAAprobacion);
+  /**
+   * @openapi
    * /api/gestion/publicaciones/{id}/aprobar:
    *   post:
    *     tags: [Gestión]
