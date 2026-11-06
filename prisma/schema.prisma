@@ -46,17 +46,16 @@ enum TipoInformacionContacto {
   @@map("tipo_informacion_contacto")
 }
 
-/// Personas de la fundación habilitadas para usar el bot.
-/// Reemplaza a "PERSONA" del diagrama dentro de la base de UP News:
-/// la persona completa vive en el sistema del equipo principal.
+/// Identidades locales enlazadas a Telegram o al sistema web principal.
 model UsuarioAutorizado {
-  id            String    @id @default(uuid(7)) @db.Uuid
-  telegramId    BigInt    @unique @map("telegram_id")
-  nombre        String
-  rol           RolUpNews @default(COLABORADOR)
-  activo        Boolean   @default(true)
-  creadoEn      DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
-  actualizadoEn DateTime  @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  id                 String    @id @default(uuid(7)) @db.Uuid
+  telegramId         BigInt?   @unique @map("telegram_id")
+  idUsuarioExterno   BigInt?   @unique @map("id_usuario_externo")
+  nombre             String
+  rol                RolUpNews @default(COLABORADOR)
+  activo             Boolean   @default(true)
+  creadoEn           DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn      DateTime  @updatedAt @map("actualizado_en") @db.Timestamptz(6)
 
   publicacionesAutor    Publicacion[]          @relation("autor")
   publicacionesAprobada Publicacion[]          @relation("aprobador")

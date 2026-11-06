@@ -31,7 +31,7 @@ export interface DependenciasRutas {
  *   POST /telegram/webhook           webhook del bot (solo producción)
  *   GET  /api/publicaciones/...      publicacion.rutas.ts
  *   POST /api/auth/telegram-login    auth.rutas.ts
- *   CRUD  /api/gestion/...           gestion.rutas.ts (sesión validada y permisos por rol)
+ * CRUD  /api/gestion/...           gestion.rutas.ts (Bearer validado por el backend principal)
  *
  * Para un módulo nuevo: crear src/rutas/<modulo>.rutas.ts y montarlo en `api` aquí abajo.
  */
@@ -49,7 +49,7 @@ export function crearRutas(deps: DependenciasRutas): Router {
   api.use(cors({
     origin: deps.corsOrigins.length > 0 ? deps.corsOrigins : true,
     methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "X-Telegram-Init-Data"],
+    allowedHeaders: ["Content-Type", "X-Telegram-Init-Data", "Authorization"],
   }));
   api.use(rateLimit({ windowMs: 60_000, limit: 120, standardHeaders: "draft-8", legacyHeaders: false }));
   api.use("/publicaciones", crearRutasPublicacion(deps.publicacionController));

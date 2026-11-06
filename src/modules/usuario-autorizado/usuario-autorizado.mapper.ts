@@ -8,6 +8,7 @@ export const UsuarioAutorizadoMapper = {
     return UsuarioAutorizado.reconstruir({
       id: fila.id,
       telegramId: fila.telegramId,
+      idUsuarioExterno: fila.idUsuarioExterno,
       nombre: fila.nombre,
       rol: fila.rol,
       activo: fila.activo,
@@ -22,6 +23,13 @@ export const UsuarioAutorizadoMapper = {
 
   aDto(usuario: UsuarioAutorizado): UsuarioAutorizadoDto {
     const u = usuario.aProps();
-    return { id: u.id, telegramId: u.telegramId.toString(), nombre: u.nombre, rol: u.rol, activo: u.activo };
+    return {
+      id: u.id,
+      telegramId: u.telegramId?.toString() ?? null,
+      idUsuarioExterno: u.idUsuarioExterno?.toString() ?? null,
+      nombre: u.nombre,
+      rol: u.rol,
+      activo: u.activo,
+    };
   },
 };

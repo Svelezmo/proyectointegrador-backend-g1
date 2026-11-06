@@ -6,15 +6,37 @@ export function crearRutasGestion(controller: GestionController): Router {
 
   /**
    * @openapi
+   * /api/gestion/upload-signature:
+   *   post:
+   *     tags: [Gestión]
+   *     summary: Obtiene parámetros para subir una imagen a Cloudinary
+   *     description: La web se autentica con Bearer y la Mini App con X-Telegram-Init-Data. El navegador usa los parámetros devueltos para subir directamente a Cloudinary; el secreto de Cloudinary nunca se expone.
+   *     parameters:
+   *       - in: header
+   *         name: Authorization
+   *         required: false
+   *         description: Para clientes web. La Mini App usa X-Telegram-Init-Data.
+   *         schema: { type: string, example: "Bearer <token>" }
+   *     responses:
+   *       200: { description: Parámetros firmados de subida }
+   *       401: { $ref: '#/components/responses/NoAutenticado' }
+   *       403: { $ref: '#/components/responses/NoAutorizado' }
+   *       503: { description: Cloudinary no está configurado }
+   */
+  router.post("/upload-signature", controller.crearFirmaSubidaImagen);
+
+  /**
+   * @openapi
    * /api/gestion/publicaciones:
    *   get:
    *     tags: [Gestión]
    *     summary: Lista las noticias gestionables por el usuario
    *     parameters:
    *       - in: header
-   *         name: X-Telegram-Init-Data
-   *         required: true
-   *         schema: { type: string }
+   *         name: Authorization
+   *         required: false
+   *         description: Para clientes web. La Mini App usa X-Telegram-Init-Data.
+   *         schema: { type: string, example: "Bearer <token>" }
    *     responses:
    *       200: { description: Noticias propias (o todas, si es DIRECTORA) }
    *       403: { $ref: '#/components/responses/NoAutorizado' }
@@ -24,9 +46,10 @@ export function crearRutasGestion(controller: GestionController): Router {
    *     description: La identidad se valida en cada petición. estado solo acepta BORRADOR o PENDIENTE_APROBACION; aprobar y activar son acciones exclusivas de DIRECTORA.
    *     parameters:
    *       - in: header
-   *         name: X-Telegram-Init-Data
-   *         required: true
-   *         schema: { type: string }
+   *         name: Authorization
+   *         required: false
+   *         description: Para clientes web. La Mini App usa X-Telegram-Init-Data.
+   *         schema: { type: string, example: "Bearer <token>" }
    *     requestBody:
    *       required: true
    *       content:
@@ -58,9 +81,10 @@ export function crearRutasGestion(controller: GestionController): Router {
    *         required: true
    *         schema: { type: string, format: uuid }
    *       - in: header
-   *         name: X-Telegram-Init-Data
-   *         required: true
-   *         schema: { type: string }
+   *         name: Authorization
+   *         required: false
+   *         description: Para clientes web. La Mini App usa X-Telegram-Init-Data.
+   *         schema: { type: string, example: "Bearer <token>" }
    *     responses:
    *       200: { description: Noticia y estado interno }
    *       404: { $ref: '#/components/responses/NoEncontrado' }
@@ -74,9 +98,10 @@ export function crearRutasGestion(controller: GestionController): Router {
    *         required: true
    *         schema: { type: string, format: uuid }
    *       - in: header
-   *         name: X-Telegram-Init-Data
-   *         required: true
-   *         schema: { type: string }
+   *         name: Authorization
+   *         required: false
+   *         description: Para clientes web. La Mini App usa X-Telegram-Init-Data.
+   *         schema: { type: string, example: "Bearer <token>" }
    *     requestBody:
    *       required: true
    *       content:
@@ -101,9 +126,10 @@ export function crearRutasGestion(controller: GestionController): Router {
    *         required: true
    *         schema: { type: string, format: uuid }
    *       - in: header
-   *         name: X-Telegram-Init-Data
-   *         required: true
-   *         schema: { type: string }
+   *         name: Authorization
+   *         required: false
+   *         description: Para clientes web. La Mini App usa X-Telegram-Init-Data.
+   *         schema: { type: string, example: "Bearer <token>" }
    *     responses:
    *       204: { description: Noticia eliminada }
    */
@@ -122,9 +148,10 @@ export function crearRutasGestion(controller: GestionController): Router {
    *         required: true
    *         schema: { type: string, format: uuid }
    *       - in: header
-   *         name: X-Telegram-Init-Data
-   *         required: true
-   *         schema: { type: string }
+   *         name: Authorization
+   *         required: false
+   *         description: Para clientes web. La Mini App usa X-Telegram-Init-Data.
+   *         schema: { type: string, example: "Bearer <token>" }
    *     responses:
    *       200: { description: Noticia aprobada, todavía inactiva }
    *       403: { $ref: '#/components/responses/NoAutorizado' }
@@ -142,9 +169,10 @@ export function crearRutasGestion(controller: GestionController): Router {
    *         required: true
    *         schema: { type: string, format: uuid }
    *       - in: header
-   *         name: X-Telegram-Init-Data
-   *         required: true
-   *         schema: { type: string }
+   *         name: Authorization
+   *         required: false
+   *         description: Para clientes web. La Mini App usa X-Telegram-Init-Data.
+   *         schema: { type: string, example: "Bearer <token>" }
    *     responses:
    *       200: { description: Noticia aprobada y activa }
    *       403: { $ref: '#/components/responses/NoAutorizado' }
@@ -162,9 +190,10 @@ export function crearRutasGestion(controller: GestionController): Router {
    *         required: true
    *         schema: { type: string, format: uuid }
    *       - in: header
-   *         name: X-Telegram-Init-Data
-   *         required: true
-   *         schema: { type: string }
+   *         name: Authorization
+   *         required: false
+   *         description: Para clientes web. La Mini App usa X-Telegram-Init-Data.
+   *         schema: { type: string, example: "Bearer <token>" }
    *     requestBody:
    *       required: true
    *       content:
@@ -183,6 +212,12 @@ export function crearRutasGestion(controller: GestionController): Router {
   /**
    * @openapi
    * /api/gestion/usuarios:
+   *   parameters:
+   *     - in: header
+   *       name: Authorization
+   *       required: false
+   *       description: Para clientes web. La Mini App usa X-Telegram-Init-Data.
+   *       schema: { type: string, example: "Bearer <token>" }
    *   get:
    *     tags: [Gestión]
    *     summary: Lista colaboradores (solo DIRECTORA)
@@ -215,9 +250,10 @@ export function crearRutasGestion(controller: GestionController): Router {
    *       required: true
    *       schema: { type: string, format: uuid }
    *     - in: header
-   *       name: X-Telegram-Init-Data
-   *       required: true
-   *       schema: { type: string }
+   *       name: Authorization
+   *       required: false
+   *       description: Para clientes web. La Mini App usa X-Telegram-Init-Data.
+   *       schema: { type: string, example: "Bearer <token>" }
    *   patch:
    *     tags: [Gestión]
    *     summary: Modifica nombre o acceso de un colaborador
@@ -237,6 +273,12 @@ export function crearRutasGestion(controller: GestionController): Router {
   /**
    * @openapi
    * /api/gestion/contactos:
+   *   parameters:
+   *     - in: header
+   *       name: Authorization
+   *       required: false
+   *       description: Para clientes web. La Mini App usa X-Telegram-Init-Data.
+   *       schema: { type: string, example: "Bearer <token>" }
    *   get:
    *     tags: [Gestión]
    *     summary: Lista la información de contacto (solo DIRECTORA)
@@ -268,9 +310,10 @@ export function crearRutasGestion(controller: GestionController): Router {
    *       required: true
    *       schema: { type: string, format: uuid }
    *     - in: header
-   *       name: X-Telegram-Init-Data
-   *       required: true
-   *       schema: { type: string }
+   *       name: Authorization
+   *       required: false
+   *       description: Para clientes web. La Mini App usa X-Telegram-Init-Data.
+   *       schema: { type: string, example: "Bearer <token>" }
    *   patch:
    *     tags: [Gestión]
    *     summary: Modifica un dato de contacto

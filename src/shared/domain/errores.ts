@@ -31,6 +31,21 @@ export class NoAutorizadoError extends ErrorDeDominio {
   readonly codigo = "NO_AUTORIZADO";
 }
 
+/** No se recibió una sesión válida o el servicio de identidad la rechazó. */
+export class NoAutenticadoError extends ErrorDeDominio {
+  readonly codigo = "NO_AUTORIZADO";
+}
+
+/** El servicio externo de identidad no pudo validar la sesión. */
+export class ServicioAutenticacionExternaError extends ErrorDeDominio {
+  readonly codigo = "ERROR_AUTENTICACION_EXTERNA";
+}
+
+/** Una funcionalidad depende de una integración que no está configurada. */
+export class ServicioNoDisponibleError extends ErrorDeDominio {
+  readonly codigo = "SERVICIO_NO_DISPONIBLE";
+}
+
 /** initData inválido, manipulado o expirado. */
 export class TelegramInitDataInvalidoError extends NoAutorizadoError {
   constructor() {
