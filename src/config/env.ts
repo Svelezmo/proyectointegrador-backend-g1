@@ -24,6 +24,9 @@ const esquemaEnv = z.object({
 
   SUPABASE_URL: z.url({ protocol: /^https$/ }).optional(),
   SUPABASE_ANON_KEY: z.string().min(1).optional(),
+  AUTH_PERFIL_URL: z
+    .url({ protocol: /^https$/ })
+    .default("https://proyecto-asiscoup-g1.onrender.com/api/auth/perfil"),
 
   // El bot es opcional para poder levantar la API sin haber creado el bot todavía.
   TELEGRAM_BOT_TOKEN: z.string().min(1).optional(),
@@ -66,9 +69,6 @@ export function leerEnv(fuente: NodeJS.ProcessEnv = process.env): Env {
   ].filter(Boolean).length;
   if (cloudinaryConfigurado !== 0 && cloudinaryConfigurado !== 3) {
     throw new Error("CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY y CLOUDINARY_API_SECRET deben configurarse juntas");
-  }
-  if (cloudinaryConfigurado === 3 && !env.TELEGRAM_BOT_TOKEN) {
-    throw new Error("TELEGRAM_BOT_TOKEN es necesario para validar initData de Telegram");
   }
   if (env.TELEGRAM_BOT_TOKEN && !env.TELEGRAM_WEBHOOK_SECRET && env.PUBLIC_URL) {
     throw new Error("Con PUBLIC_URL (webhook) también se requiere TELEGRAM_WEBHOOK_SECRET");

@@ -2,6 +2,7 @@ import { env } from "./config/env.js";
 import { prisma } from "./config/prisma.js";
 import { TelegramAuthController } from "./modules/auth/telegram-auth.controller.js";
 import { TelegramStatelessSessionProvider } from "./modules/auth/telegram-stateless-session.provider.js";
+import { PerfilExternoAuthService } from "./modules/auth/perfil-externo-auth.service.js";
 import { GestionController } from "./modules/gestion/gestion.controller.js";
 import { PrismaInformacionContactoRepository } from "./modules/contacto/informacion-contacto.prisma.repository.js";
 import { InformacionContactoService } from "./modules/contacto/informacion-contacto.service.js";
@@ -44,12 +45,7 @@ const almacenamiento =
 const publicacionService = new PublicacionService(publicacionRepository);
 const usuarioAutorizadoService = new UsuarioAutorizadoService(usuarioAutorizadoRepository);
 const informacionContactoService = new InformacionContactoService(informacionContactoRepository);
-
-// Entradas: controllers HTTP y bot de Telegram
-const publicacionController = new PublicacionController(publicacionService);
-let telegramAuthController: TelegramAuthController | undefined;
-let miniAppController: MiniAppController | undefined;
-let gestionController: GestionController | undefined;
+const autenticacionWeb = new PerfilExternoAuthService(usuarioAutorizadoRepository, env.AUTH_PERFIL_URL);
 let autenticacion: TelegramMiniAppAuthService | undefined;
 if (env.TELEGRAM_BOT_TOKEN) {
   autenticacion = new TelegramMiniAppAuthService(
@@ -57,14 +53,22 @@ if (env.TELEGRAM_BOT_TOKEN) {
     usuarioAutorizadoService,
     new TelegramStatelessSessionProvider(),
   );
+}
+
+// Entradas: controllers HTTP y bot de Telegram
+const publicacionController = new PublicacionController(publicacionService);
+let telegramAuthController: TelegramAuthController | undefined;
+let miniAppController: MiniAppController | undefined;
+const gestionController = new GestionController(
+  autenticacionWeb,
+  publicacionService,
+  usuarioAutorizadoService,
+  informacionContactoService,
+  almacenamiento,
+  autenticacion,
+);
+if (autenticacion) {
   telegramAuthController = new TelegramAuthController(autenticacion);
-  gestionController = new GestionController(
-    autenticacion,
-    publicacionService,
-    usuarioAutorizadoService,
-    informacionContactoService,
-    almacenamiento,
-  );
 }
 if (
   almacenamiento &&

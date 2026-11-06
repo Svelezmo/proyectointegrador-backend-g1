@@ -6,9 +6,8 @@ import { UsuarioAutorizadoMapper } from "./usuario-autorizado.mapper.js";
 import type { UsuarioAutorizadoRepository } from "./usuario-autorizado.repository.js";
 
 /**
- * SERVICE: autenticación por ID de Telegram y administración de la lista blanca.
- * Reemplaza al login con JWT: Telegram ya garantiza quién envía cada mensaje
- * (y el webhook se protege con TELEGRAM_WEBHOOK_SECRET).
+ * SERVICE: autenticación por ID de Telegram y administración de su lista blanca.
+ * La autenticación web se implementa en PerfilExternoAuthService.
  */
 export class UsuarioAutorizadoService {
   constructor(private readonly usuarios: UsuarioAutorizadoRepository) {}

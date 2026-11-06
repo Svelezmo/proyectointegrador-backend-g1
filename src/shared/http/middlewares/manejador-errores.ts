@@ -2,8 +2,11 @@ import type { ErrorRequestHandler, RequestHandler } from "express";
 import {
   ErrorDeDominio,
   NoAutorizadoError,
+  NoAutenticadoError,
   NoEncontradoError,
   ReglaDeNegocioError,
+  ServicioAutenticacionExternaError,
+  ServicioNoDisponibleError,
   TelegramInitDataInvalidoError,
   ValidacionError,
 } from "../../domain/errores.js";
@@ -11,6 +14,9 @@ import {
 const ESTADO_HTTP = new Map<Function, number>([
   [ValidacionError, 400],
   [NoAutorizadoError, 403],
+  [NoAutenticadoError, 401],
+  [ServicioAutenticacionExternaError, 502],
+  [ServicioNoDisponibleError, 503],
   [TelegramInitDataInvalidoError, 403],
   [NoEncontradoError, 404],
   [ReglaDeNegocioError, 409],

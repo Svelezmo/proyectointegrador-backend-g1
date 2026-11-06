@@ -44,7 +44,8 @@ src/
     ├── publicacion/     # ← MÓDULO DE REFERENCIA (copiar este patrón)
     ├── almacenamiento/  # Puerto de almacenamiento y adaptador de Cloudinary
     ├── miniapp/         # Casos de uso y controller HTTP de la Mini App
-    ├── usuario-autorizado/  # Lista blanca de Telegram (autenticación)
+    ├── usuario-autorizado/  # Identidades locales asociadas a Telegram o al usuario web
+    ├── auth/                # Validación de tokens web contra el backend principal
     └── telegram/        # Bot: es otra "entrada", como un controller
 ```
 
@@ -85,13 +86,15 @@ y el middleware `manejadorErrores` lo convierte en 404, 409, etc. El bot hace lo
 4. **entity** verifica que el actor sea la directora y que el estado lo permita.
 5. **repository** guarda; Supabase Realtime avisa al frontend.
 
-## Autenticación (sin JWT)
+## Autenticación
 
 - Telegram pone `from.id` en cada mensaje; no se puede falsificar si el webhook exige `secret_token`.
-- `usuario_autorizado.telegram_id` (BIGINT) es la lista blanca. Solo la directora agrega o revoca.
+- `usuario_autorizado.telegram_id` (BIGINT, opcional) identifica las cuentas autorizadas para Telegram.
 - La Mini App valida criptográficamente `initData` con el token del bot, limita su antigüedad a 24 horas y verifica la lista blanca antes de firmar una subida o crear un borrador.
 - La validación entrega también el `Actor { id, nombre, rol }`; el frontend elige su vista por rol, pero el backend vuelve a validar el rol en cada operación.
-- Los endpoints `/api/gestion/*` son REST para clientes web y no dependen del bot de chat. Cada petición protegida requiere `X-Telegram-Init-Data`; no se confía en un rol enviado por el frontend.
+- Los endpoints `/api/gestion/*` requieren `Authorization: Bearer <token>`. Cada petición consulta `AUTH_PERFIL_URL`; nunca se confía en un rol enviado por el frontend.
+- Los roles externos `ADMIN` y `TALLERISTA` se traducen a `DIRECTORA` y `COLABORADOR`. El `id_usuario` externo se guarda en `usuario_autorizado.id_usuario_externo`, que permite conservar las relaciones actuales de autoría. Las cuentas web no necesitan ID de Telegram.
+- `/api/miniapp/*`, Telegram y `/api/publicaciones` pública conservan su comportamiento actual.
 - Cloudinary se firma en el backend; el navegador recibe solo los parámetros públicos de subida y la firma temporal. La imagen y el borrador se asocian en una transacción.
 - Los services reciben un `Actor { id, nombre, rol }`; no saben de dónde salió.
 - Si otro frontend necesita autenticación no basada en Telegram, se agrega una nueva forma de obtener el `Actor` sin tocar services ni entities.

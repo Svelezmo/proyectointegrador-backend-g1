@@ -20,14 +20,14 @@ export const swaggerSpec = swaggerJSDoc({
       title: "UP News API",
       version: "0.1.0",
       description:
-        "API pública de noticias y endpoints de gestión protegidos por initData validado de Telegram. La publicación y activación requieren rol DIRECTORA.",
+        "API pública de noticias y endpoints de gestión protegidos mediante un token validado por el backend principal. La publicación y activación requieren rol ADMIN (DIRECTORA en UP News).",
     },
     // URL relativa: "Try it out" usa el mismo servidor donde se abrió /api-docs (local o Render).
     servers: [{ url: "/", description: "Este servidor" }],
     tags: [
       { name: "Publicaciones", description: "Noticias visibles en la página web" },
       { name: "Mini App", description: "Subida firmada de imágenes y creación de borradores autenticadas con Telegram" },
-      { name: "Gestión", description: "CRUD de noticias, colaboradores e información de contacto" },
+      { name: "Gestión", description: "CRUD web de noticias, colaboradores e información de contacto con token Bearer" },
       { name: "Sistema", description: "Estado del servicio" },
     ],
     components: {
@@ -82,11 +82,29 @@ export const swaggerSpec = swaggerJSDoc({
           },
         },
         NoAutorizado: {
-          description: "La sesión de Telegram es inválida, expiró o el usuario no está autorizado",
+          description: "La sesión es inválida, expiró o el usuario no está autorizado",
           content: {
             "application/json": {
               schema: { $ref: "#/components/schemas/Error" },
-              example: { error: "La sesión de Telegram es inválida o ha expirado", codigo: "NO_AUTORIZADO" },
+              example: { error: "El token es inválido o ha expirado", codigo: "NO_AUTORIZADO" },
+            },
+          },
+        },
+        NoAutenticado: {
+          description: "Falta el token Bearer o el backend de identidad lo rechazó",
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/Error" },
+              example: { error: "El token es inválido o ha expirado", codigo: "NO_AUTORIZADO" },
+            },
+          },
+        },
+        ServicioNoDisponible: {
+          description: "Una integración requerida no está configurada",
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/Error" },
+              example: { error: "La subida de imágenes no está configurada", codigo: "SERVICIO_NO_DISPONIBLE" },
             },
           },
         },

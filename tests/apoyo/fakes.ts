@@ -53,13 +53,16 @@ export class PublicacionRepositoryEnMemoria implements PublicacionRepository {
 }
 
 export class UsuarioAutorizadoRepositoryEnMemoria implements UsuarioAutorizadoRepository {
-  readonly datos = new Map<bigint, UsuarioAutorizado>();
+  readonly datos = new Map<string, UsuarioAutorizado>();
 
   async guardar(usuario: UsuarioAutorizado) {
-    this.datos.set(usuario.telegramId, usuario);
+    this.datos.set(usuario.id, usuario);
   }
   async buscarPorTelegramId(telegramId: bigint) {
-    return this.datos.get(telegramId) ?? null;
+    return [...this.datos.values()].find(user => user.telegramId === telegramId) ?? null;
+  }
+  async buscarPorIdUsuarioExterno(idUsuarioExterno: bigint) {
+    return [...this.datos.values()].find(user => user.idUsuarioExterno === idUsuarioExterno) ?? null;
   }
   async buscarPorId(id: string) {
     return [...this.datos.values()].find(user => user.aProps().id === id) ?? null;

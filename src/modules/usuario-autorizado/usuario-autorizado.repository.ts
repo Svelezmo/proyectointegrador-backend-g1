@@ -5,5 +5,6 @@ export interface UsuarioAutorizadoRepository {
   guardar(usuario: UsuarioAutorizado): Promise<void>;
   buscarPorId(id: string): Promise<UsuarioAutorizado | null>;
   buscarPorTelegramId(telegramId: bigint): Promise<UsuarioAutorizado | null>;
+  buscarPorIdUsuarioExterno(idUsuarioExterno: bigint): Promise<UsuarioAutorizado | null>;
   listar(): Promise<UsuarioAutorizado[]>;
 }

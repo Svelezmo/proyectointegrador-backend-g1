@@ -16,6 +16,11 @@ export class PrismaUsuarioAutorizadoRepository implements UsuarioAutorizadoRepos
     return fila ? UsuarioAutorizadoMapper.aEntidad(fila) : null;
   }
 
+  async buscarPorIdUsuarioExterno(idUsuarioExterno: bigint): Promise<UsuarioAutorizado | null> {
+    const fila = await this.db.usuarioAutorizado.findUnique({ where: { idUsuarioExterno } });
+    return fila ? UsuarioAutorizadoMapper.aEntidad(fila) : null;
+  }
+
   async buscarPorId(id: string): Promise<UsuarioAutorizado | null> {
     const fila = await this.db.usuarioAutorizado.findUnique({ where: { id } });
     return fila ? UsuarioAutorizadoMapper.aEntidad(fila) : null;

@@ -30,7 +30,8 @@ export const editarUsuarioDto = z.object({
 
 export interface UsuarioAutorizadoDto {
   id: string;
-  telegramId: string; // como texto: JSON no soporta bigint
+  telegramId: string | null;
+  idUsuarioExterno: string | null;
   nombre: string;
   rol: Rol;
   activo: boolean;

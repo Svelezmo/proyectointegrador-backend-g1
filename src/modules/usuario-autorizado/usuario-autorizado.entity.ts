@@ -3,12 +3,12 @@ import type { Actor, Rol } from "../../shared/domain/actor.js";
 import { ValidacionError } from "../../shared/domain/errores.js";
 
 /**
- * ENTITY: una persona de la fundación habilitada para usar el bot.
- * La identidad se comprueba con su ID de Telegram (BIGINT: ya no cabe en un entero de 32 bits).
+ * ENTITY: identidad local enlazada a Telegram o al perfil del backend web principal.
  */
 export interface PropsUsuarioAutorizado {
   id: string;
-  telegramId: bigint;
+  telegramId: bigint | null;
+  idUsuarioExterno: bigint | null;
   nombre: string;
   rol: Rol;
   activo: boolean;
@@ -19,13 +19,25 @@ export interface PropsUsuarioAutorizado {
 export class UsuarioAutorizado {
   private constructor(private props: PropsUsuarioAutorizado) {}
 
-  static crear(datos: { telegramId: bigint; nombre: string; rol: Rol }, ahora = new Date()): UsuarioAutorizado {
-    if (datos.telegramId <= 0n) throw new ValidacionError("ID de Telegram inválido", ["telegramId"]);
+  static crear(
+    datos: { telegramId?: bigint | undefined; idUsuarioExterno?: bigint | undefined; nombre: string; rol: Rol },
+    ahora = new Date(),
+  ): UsuarioAutorizado {
+    if (datos.telegramId === undefined && datos.idUsuarioExterno === undefined) {
+      throw new ValidacionError("Se requiere una identidad de Telegram o web");
+    }
+    if (datos.telegramId !== undefined && datos.telegramId <= 0n) {
+      throw new ValidacionError("ID de Telegram inválido", ["telegramId"]);
+    }
+    if (datos.idUsuarioExterno !== undefined && datos.idUsuarioExterno <= 0n) {
+      throw new ValidacionError("ID de usuario externo inválido", ["idUsuarioExterno"]);
+    }
     const nombre = datos.nombre.trim();
     if (nombre.length === 0) throw new ValidacionError("El nombre es obligatorio", ["nombre"]);
     return new UsuarioAutorizado({
       id: randomUUID(),
-      telegramId: datos.telegramId,
+      telegramId: datos.telegramId ?? null,
+      idUsuarioExterno: datos.idUsuarioExterno ?? null,
       nombre,
       rol: datos.rol,
       activo: true,
@@ -40,6 +52,7 @@ export class UsuarioAutorizado {
 
   get id() { return this.props.id; }
   get telegramId() { return this.props.telegramId; }
+  get idUsuarioExterno() { return this.props.idUsuarioExterno; }
   get activo() { return this.props.activo; }
   get rol() { return this.props.rol; }
 
@@ -61,6 +74,14 @@ export class UsuarioAutorizado {
     const nombreNormalizado = nombre.trim();
     if (!nombreNormalizado) throw new ValidacionError("El nombre es obligatorio", ["nombre"]);
     this.props.nombre = nombreNormalizado;
+    this.props.actualizadoEn = ahora;
+  }
+
+  sincronizarPerfilWeb(nombre: string, rol: Rol, ahora = new Date()): void {
+    const nombreNormalizado = nombre.trim();
+    if (!nombreNormalizado) throw new ValidacionError("El nombre es obligatorio", ["nombre"]);
+    this.props.nombre = nombreNormalizado;
+    this.props.rol = rol;
     this.props.actualizadoEn = ahora;
   }
 
