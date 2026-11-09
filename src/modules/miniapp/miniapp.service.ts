@@ -2,6 +2,7 @@ import type { Actor } from "../../shared/domain/actor.js";
 import { ValidacionError } from "../../shared/domain/errores.js";
 import type { AlmacenamientoPort, FirmaSubidaImagen } from "../almacenamiento/almacenamiento.port.js";
 import type { CrearPublicacionDto, PublicacionInternaDto } from "../publicacion/publicacion.dto.js";
+import { obtenerIdVideoYoutube } from "../publicacion/evidencia.js";
 import type { PublicacionService } from "../publicacion/publicacion.service.js";
 import type { TelegramMiniAppAuthPort } from "../telegram/telegram-miniapp-auth.port.js";
 import type { CrearPublicacionMiniAppDto } from "./miniapp.dto.js";
@@ -25,9 +26,13 @@ export class MiniAppService {
     const actor: Actor = await this.autenticacion.autenticar(initData);
     if (
       dto.imagenUrl &&
+      !obtenerIdVideoYoutube(dto.imagenUrl) &&
       !this.almacenamiento.perteneceAEsteAlmacenamiento(dto.imagenUrl)
     ) {
-      throw new ValidacionError("La imagen no pertenece al almacenamiento configurado", ["imagenUrl"]);
+      throw new ValidacionError(
+        "La evidencia debe ser una imagen del almacenamiento configurado o un video de YouTube",
+        ["imagenUrl"],
+      );
     }
     const datosPublicacion: CrearPublicacionDto = {
       titulo: dto.titulo,

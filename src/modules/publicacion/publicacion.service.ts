@@ -9,6 +9,7 @@ import type {
   PublicacionPublicaDto,
 } from "./publicacion.dto.js";
 import { Publicacion, type EstadoPublicacion } from "./publicacion.entity.js";
+import { tipoEvidenciaDeUrl } from "./evidencia.js";
 import { PublicacionMapper } from "./publicacion.mapper.js";
 import type { PublicacionRepository } from "./publicacion.repository.js";
 
@@ -42,8 +43,11 @@ export class PublicacionService {
 
   // ── Casos de uso internos (API de gestión y bot) ────────
 
-  async crear(dto: CrearPublicacionDto, actor: Actor, imagenUrl?: string): Promise<PublicacionInternaDto> {
-    const publicacion = Publicacion.crear({ ...dto, imagenUrl }, actor);
+  async crear(dto: CrearPublicacionDto, actor: Actor, imagenUrl?: string | null): Promise<PublicacionInternaDto> {
+    const publicacion = Publicacion.crear(
+      { ...dto, imagenUrl, tipoEvidencia: tipoEvidenciaDeUrl(imagenUrl) },
+      actor,
+    );
     await this.publicaciones.guardar(publicacion);
     return PublicacionMapper.aInternaDto(publicacion);
   }
@@ -70,11 +74,19 @@ export class PublicacionService {
     id: string,
     dto: EditarPublicacionDto,
     actor: Actor,
-    imagenUrl?: string,
+    imagenUrl?: string | null,
   ): Promise<PublicacionInternaDto> {
     const publicacion = await this.publicaciones.buscarPorId(id);
     if (!publicacion) throw new NoEncontradoError("Publicación no encontrada");
-    publicacion.editar({ ...dto, ...(imagenUrl ? { imagenUrl } : {}) }, actor);
+    publicacion.editar(
+      {
+        ...dto,
+        ...(imagenUrl !== undefined
+          ? { imagenUrl, tipoEvidencia: tipoEvidenciaDeUrl(imagenUrl) }
+          : {}),
+      },
+      actor,
+    );
     await this.publicaciones.guardar(publicacion);
     return PublicacionMapper.aInternaDto(publicacion);
   }

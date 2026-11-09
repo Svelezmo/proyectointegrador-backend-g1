@@ -11,7 +11,7 @@ import type { Publicacion } from "./publicacion.entity.js";
  */
 export interface PublicacionRepository {
   /**
-   * Inserta o actualiza la publicación completa, incluida su imagen principal:
+   * Inserta o actualiza la publicación completa, incluida su evidencia principal:
    * si la imagen cambió, reemplaza la evidencia anterior por la nueva (de forma atómica).
    */
   guardar(publicacion: Publicacion): Promise<void>;

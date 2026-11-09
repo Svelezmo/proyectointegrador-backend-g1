@@ -2,9 +2,9 @@ import type { Publicacion as PublicacionModelo } from "../../generated/prisma/cl
 import { Publicacion } from "./publicacion.entity.js";
 import type { PublicacionInternaDto, PublicacionPublicaDto } from "./publicacion.dto.js";
 
-/** Fila de publicación con su imagen principal (la evidencia de tipo IMAGEN más reciente). */
+/** Fila de publicación con su evidencia principal más reciente. */
 export type PublicacionConImagen = PublicacionModelo & {
-  evidencias?: { evidencia: { url: string } }[];
+  evidencias?: { evidencia: { url: string; tipo: "IMAGEN" | "VIDEO" } }[];
 };
 
 /**
@@ -24,6 +24,7 @@ export const PublicacionMapper = {
       proposito: fila.proposito,
       etiqueta: fila.etiqueta,
       imagenUrl: fila.evidencias?.[0]?.evidencia.url ?? null,
+      tipoEvidencia: fila.evidencias?.[0]?.evidencia.tipo ?? null,
       estado: fila.estado,
       estaActivo: fila.estaActivo,
       autorId: fila.autorId,
@@ -36,7 +37,7 @@ export const PublicacionMapper = {
 
   /** Dominio -> base de datos (solo columnas de la tabla publicacion). */
   aPersistencia(publicacion: Publicacion): PublicacionModelo {
-    const { imagenUrl: _imagenUrl, ...columnas } = publicacion.aProps();
+    const { imagenUrl: _imagenUrl, tipoEvidencia: _tipoEvidencia, ...columnas } = publicacion.aProps();
     return columnas;
   },
 
@@ -50,6 +51,7 @@ export const PublicacionMapper = {
       cuerpo: p.cuerpo,
       etiqueta: p.etiqueta,
       imagenUrl: p.imagenUrl,
+      tipoEvidencia: p.tipoEvidencia,
       publicadaEn: p.publicadaEn?.toISOString() ?? null,
     };
   },

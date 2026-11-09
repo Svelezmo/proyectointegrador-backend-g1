@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { EstadoPublicacion } from "./publicacion.entity.js";
+import type { TipoEvidencia } from "./evidencia.js";
 
 /**
  * DTO (Data Transfer Object): define la FORMA de los datos que entran y salen del módulo.
@@ -54,8 +55,9 @@ export interface PublicacionPublicaDto {
   resumen: string | null;
   cuerpo: string;
   etiqueta: string | null;
-  /** Imagen principal (Cloudinary) o null si la noticia no tiene foto. */
+  /** URL del medio principal (imagen o video) o null si no se adjuntó evidencia. */
   imagenUrl: string | null;
+  tipoEvidencia: TipoEvidencia | null;
   publicadaEn: string | null;
 }
 

@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { puedeAprobar, type Actor } from "../../shared/domain/actor.js";
 import { NoAutorizadoError, ReglaDeNegocioError, ValidacionError } from "../../shared/domain/errores.js";
+import type { TipoEvidencia } from "./evidencia.js";
 
 /**
  * ENTITY: el corazón del módulo. Contiene las reglas de negocio de una publicación
@@ -18,8 +19,9 @@ export interface PropsPublicacion {
   cuerpo: string;
   proposito: string | null;
   etiqueta: string | null;
-  /** URL de la imagen principal (se guarda como Evidencia de tipo IMAGEN). */
+  /** URL del medio principal, guardado como evidencia de tipo IMAGEN o VIDEO. */
   imagenUrl: string | null;
+  tipoEvidencia: TipoEvidencia | null;
   estado: EstadoPublicacion;
   estaActivo: boolean;
   autorId: string;
@@ -36,6 +38,7 @@ export interface DatosNuevaPublicacion {
   proposito?: string | null | undefined;
   etiqueta?: string | null | undefined;
   imagenUrl?: string | null | undefined;
+  tipoEvidencia?: TipoEvidencia | null | undefined;
   estado?: "BORRADOR" | "PENDIENTE_APROBACION" | undefined;
 }
 
@@ -45,7 +48,8 @@ type CampoEditable =
   | "cuerpo"
   | "proposito"
   | "etiqueta"
-  | "imagenUrl";
+  | "imagenUrl"
+  | "tipoEvidencia";
 /** Campos que se pueden editar; los que llegan como undefined se ignoran. */
 export type CambiosPublicacion = { [K in CampoEditable]?: PropsPublicacion[K] | undefined };
 
@@ -64,6 +68,7 @@ export class Publicacion {
       proposito: datos.proposito ?? null,
       etiqueta: datos.etiqueta ?? null,
       imagenUrl: datos.imagenUrl ?? null,
+      tipoEvidencia: datos.tipoEvidencia ?? null,
       estado: datos.estado ?? "BORRADOR",
       estaActivo: false,
       autorId: autor.id,

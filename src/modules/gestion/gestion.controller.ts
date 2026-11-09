@@ -13,16 +13,17 @@ import type { AlmacenamientoPort } from "../almacenamiento/almacenamiento.port.j
 import { informacionContactoDto, idContactoDto } from "../contacto/informacion-contacto.dto.js";
 import type { InformacionContactoService } from "../contacto/informacion-contacto.service.js";
 import { crearPublicacionDto, editarPublicacionDto, idPublicacionDto } from "../publicacion/publicacion.dto.js";
+import { obtenerIdVideoYoutube } from "../publicacion/evidencia.js";
 import type { PublicacionService } from "../publicacion/publicacion.service.js";
 import type { TelegramMiniAppAuthPort } from "../telegram/telegram-miniapp-auth.port.js";
 import { autorizarUsuarioDto, editarUsuarioDto, idUsuarioDto } from "../usuario-autorizado/usuario-autorizado.dto.js";
 import type { UsuarioAutorizadoService } from "../usuario-autorizado/usuario-autorizado.service.js";
 
 const crearGestionPublicacionDto = crearPublicacionDto.extend({
-  imagenUrl: z.url({ protocol: /^https$/ }).optional(),
+  imagenUrl: z.url({ protocol: /^https$/ }).nullable().optional(),
 });
 const editarGestionPublicacionDto = editarPublicacionDto.extend({
-  imagenUrl: z.url({ protocol: /^https$/ }).optional(),
+  imagenUrl: z.url({ protocol: /^https$/ }).nullable().optional(),
 });
 const activacionDto = z.object({ estaActivo: z.boolean() }).strict();
 
@@ -58,7 +59,7 @@ export class GestionController {
     const actor = await this.obtenerActor(req);
     const datos = validar(crearGestionPublicacionDto, req.body);
     const { imagenUrl, ...noticia } = datos;
-    this.validarImagen(imagenUrl);
+    this.validarEvidencia(imagenUrl);
     res.status(201).json(await this.publicaciones.crear(noticia, actor, imagenUrl));
   };
 
@@ -67,7 +68,7 @@ export class GestionController {
     const { id } = validar(idPublicacionDto, req.params);
     const datos = validar(editarGestionPublicacionDto, req.body);
     const { imagenUrl, ...noticia } = datos;
-    this.validarImagen(imagenUrl);
+    this.validarEvidencia(imagenUrl);
     res.json(await this.publicaciones.editar(id, noticia, actor, imagenUrl));
   };
 
@@ -160,14 +161,15 @@ export class GestionController {
     throw new NoAutenticadoError("Se requiere un token Bearer o una sesión válida de Telegram");
   }
 
-  private validarImagen(imagenUrl: string | undefined): void {
+  private validarEvidencia(imagenUrl: string | null | undefined): void {
     if (
       imagenUrl &&
+      !obtenerIdVideoYoutube(imagenUrl) &&
       (!this.almacenamiento ||
         !this.almacenamiento.perteneceAEsteAlmacenamiento(imagenUrl))
     ) {
       throw new ValidacionError(
-        "La imagen no pertenece al almacenamiento configurado",
+        "La evidencia debe ser una imagen del almacenamiento configurado o un video de YouTube",
         ["imagenUrl"],
       );
     }

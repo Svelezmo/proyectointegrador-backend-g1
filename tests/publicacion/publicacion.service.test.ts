@@ -28,7 +28,37 @@ describe("PublicacionService", () => {
     );
     assert.equal(repo.imagenes.get(dto.id), url);
     assert.equal(dto.imagenUrl, url);
+    assert.equal(dto.tipoEvidencia, "IMAGEN");
     assert.equal(repo.datos.get(dto.id)?.autorId, colaborador.id);
+  });
+
+  test("crear con enlace de YouTube guarda la evidencia como video", async () => {
+    const url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+    const dto = await service.crear(
+      { titulo: "Noticia con video", cuerpo: "Texto", estado: "BORRADOR" },
+      colaborador,
+      url,
+    );
+
+    assert.equal(dto.imagenUrl, url);
+    assert.equal(dto.tipoEvidencia, "VIDEO");
+    assert.equal(repo.datos.get(dto.id)?.aProps().tipoEvidencia, "VIDEO");
+  });
+
+  test("editar reemplaza una imagen por una evidencia de tipo video", async () => {
+    const imagen = "https://res.cloudinary.com/upnews/image/upload/v1/noticia.jpg";
+    const video = "https://youtu.be/dQw4w9WgXcQ";
+    const creada = await service.crear(
+      { titulo: "Noticia", cuerpo: "Texto", estado: "BORRADOR" },
+      colaborador,
+      imagen,
+    );
+
+    const actualizada = await service.editar(creada.id, {}, colaborador, video);
+
+    assert.equal(actualizada.imagenUrl, video);
+    assert.equal(actualizada.tipoEvidencia, "VIDEO");
+    assert.equal(repo.datos.get(creada.id)?.aProps().tipoEvidencia, "VIDEO");
   });
 
   test("la web solo ve publicaciones publicadas", async () => {
