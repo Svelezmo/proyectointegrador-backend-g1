@@ -4,6 +4,7 @@ import type { Pagina } from "../../shared/domain/paginacion.js";
 import type {
   CrearPublicacionDto,
   EditarPublicacionDto,
+  ListarHistoricoDto,
   ListarPublicacionesDto,
   PublicacionInternaDto,
   PublicacionPublicaDto,
@@ -31,9 +32,14 @@ export class PublicacionService {
     return { items: items.map(PublicacionMapper.aPublicaDto), total, pagina: filtro.pagina, limite: filtro.limite };
   }
 
+  async listarHistorico(filtro: ListarHistoricoDto): Promise<Pagina<PublicacionPublicaDto>> {
+    const { items, total } = await this.publicaciones.listarHistorico(filtro);
+    return { items: items.map(PublicacionMapper.aPublicaDto), total, pagina: filtro.pagina, limite: filtro.limite };
+  }
+
   async obtenerPublicada(id: string): Promise<PublicacionPublicaDto> {
     const publicacion = await this.publicaciones.buscarPorId(id);
-    if (!publicacion?.estaPublicada) throw new NoEncontradoError("Publicación no encontrada");
+    if (publicacion?.estado !== "PUBLICADA") throw new NoEncontradoError("Publicación no encontrada");
     return PublicacionMapper.aPublicaDto(publicacion);
   }
 

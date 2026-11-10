@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { beforeEach, describe, test } from "node:test";
 import { PublicacionService } from "../../src/modules/publicacion/publicacion.service.js";
+import { Publicacion } from "../../src/modules/publicacion/publicacion.entity.js";
+import {
+  crearPublicacionDto,
+  listarPublicacionesDto,
+} from "../../src/modules/publicacion/publicacion.dto.js";
 import { NoEncontradoError } from "../../src/shared/domain/errores.js";
 import { colaborador, directora, comunicaciones, PublicacionRepositoryEnMemoria } from "../apoyo/fakes.js";
 
@@ -17,6 +22,20 @@ describe("PublicacionService", () => {
     const dto = await service.crear({ titulo: "Noticia", cuerpo: "Texto", estado: "BORRADOR" }, colaborador);
     assert.equal(dto.estado, "BORRADOR");
     assert.equal(repo.datos.size, 1);
+  });
+
+  test("los DTO solo aceptan etiquetas y propósitos del enum", () => {
+    const base = { titulo: "Noticia", cuerpo: "Texto" };
+    assert.equal(crearPublicacionDto.safeParse({ ...base, etiqueta: "Talleres" }).success, false);
+    assert.equal(crearPublicacionDto.safeParse({ ...base, proposito: "Otro propósito" }).success, false);
+    assert.equal(
+      crearPublicacionDto.safeParse({
+        ...base,
+        etiqueta: "Comunidad",
+        proposito: "Informar a la comunidad",
+      }).success,
+      true,
+    );
   });
 
   test("crear con imagen la guarda asociada al borrador", async () => {
@@ -73,6 +92,63 @@ describe("PublicacionService", () => {
     await assert.rejects(service.obtenerPublicada(borrador.id), NoEncontradoError);
   });
 
+  test("el histórico incluye aprobadas activas e inactivas, busca por título y excluye no aprobadas", async () => {
+    const fechaAntigua = new Date("2026-10-01T10:00:00.000Z");
+    const inactiva = Publicacion.crear(
+      { titulo: "Jornada de bienestar", cuerpo: "Texto", etiqueta: "Salud" },
+      comunicaciones,
+      fechaAntigua,
+    );
+    inactiva.publicar(directora, fechaAntigua);
+    await repo.guardar(inactiva);
+
+    const fechaReciente = new Date("2026-11-01T10:00:00.000Z");
+    const activa = Publicacion.crear(
+      { titulo: "Encuentro comunitario", cuerpo: "Texto", etiqueta: "Comunidad" },
+      comunicaciones,
+      fechaReciente,
+    );
+    activa.publicar(directora, fechaReciente);
+    activa.cambiarActivacion(true, directora, fechaReciente);
+    await repo.guardar(activa);
+
+    const borrador = await service.crear({ titulo: "Borrador", cuerpo: "Texto", estado: "BORRADOR" }, colaborador);
+    const pendiente = await service.crear(
+      { titulo: "Solicitud pendiente", cuerpo: "Texto", estado: "PENDIENTE_APROBACION" },
+      colaborador,
+    );
+
+    const historico = await service.listarHistorico({ pagina: 1, limite: 10 });
+    assert.deepEqual(historico.items.map(item => item.titulo), ["Encuentro comunitario", "Jornada de bienestar"]);
+    const primeraPagina = await service.listarHistorico({ pagina: 1, limite: 1 });
+    assert.equal(primeraPagina.total, 2);
+    assert.deepEqual(primeraPagina.items.map(item => item.id), [activa.id]);
+    assert.deepEqual(Object.keys(historico.items[1]!).sort(), [
+      "cuerpo",
+      "etiqueta",
+      "id",
+      "imagenUrl",
+      "publicadaEn",
+      "resumen",
+      "tipoEvidencia",
+      "titulo",
+    ]);
+
+    const filtrado = await service.listarHistorico({
+      pagina: 1,
+      limite: 10,
+      etiqueta: "Salud",
+      busqueda: "BIENESTAR",
+    });
+    assert.deepEqual(filtrado.items.map(item => item.id), [inactiva.id]);
+    assert.deepEqual((await service.listarPublicadas({ pagina: 1, limite: 10 })).items.map(item => item.id), [
+      activa.id,
+    ]);
+    assert.equal((await service.obtenerPublicada(inactiva.id)).id, inactiva.id);
+    await assert.rejects(service.obtenerPublicada(borrador.id), NoEncontradoError);
+    await assert.rejects(service.obtenerPublicada(pendiente.id), NoEncontradoError);
+  });
+
   test("la gestión muestra a cada colaborador todas sus noticias (no las ajenas) y todo a la directora", async () => {
     await service.crear(
       { titulo: "Mi borrador", cuerpo: "Texto", estado: "BORRADOR" },
@@ -95,14 +171,16 @@ describe("PublicacionService", () => {
   });
 
   test("filtra por etiqueta sin importar mayúsculas y lista etiquetas solo de lo publicado", async () => {
-    const taller = await service.crear({ titulo: "Taller", cuerpo: "T", etiqueta: "Talleres", estado: "BORRADOR" }, comunicaciones);
+    const taller = await service.crear({ titulo: "Taller", cuerpo: "T", etiqueta: "Eventos", estado: "BORRADOR" }, comunicaciones);
     await service.crear({ titulo: "Oculta", cuerpo: "T", etiqueta: "Eventos", estado: "BORRADOR" }, comunicaciones);
     await service.publicar(taller.id, directora);
     await service.cambiarActivacion(taller.id, true, directora);
 
-    const filtradas = await service.listarPublicadas({ pagina: 1, limite: 10, etiqueta: "talleres" });
+    const filtradas = await service.listarPublicadas(
+      listarPublicacionesDto.parse({ pagina: 1, limite: 10, etiqueta: "eventos" }),
+    );
     assert.deepEqual(filtradas.items.map(p => p.titulo), ["Taller"]);
-    assert.deepEqual(await service.listarEtiquetas(), ["Talleres"]);
+    assert.deepEqual(await service.listarEtiquetas(), ["Eventos"]);
   });
 
   test("la directora puede aprobar y activar en una sola operación", async () => {

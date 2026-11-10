@@ -14,8 +14,8 @@ export function crearRutasPublicacion(controller: PublicacionController): Router
    * /api/publicaciones:
    *   get:
    *     tags: [Publicaciones]
-   *     summary: Lista las noticias publicadas
-   *     description: Devuelve solo publicaciones en estado PUBLICADA, de la más reciente a la más antigua.
+   *     summary: Lista las noticias activas
+   *     description: Endpoint de Inicio. Devuelve únicamente publicaciones en estado PUBLICADA y activas.
    *     parameters:
    *       - in: query
    *         name: pagina
@@ -25,17 +25,49 @@ export function crearRutasPublicacion(controller: PublicacionController): Router
    *         schema: { type: integer, minimum: 1, maximum: 50, default: 10 }
    *       - in: query
    *         name: etiqueta
-   *         description: Filtra por etiqueta (no distingue mayúsculas). Ej. Talleres
-   *         schema: { type: string }
+   *         description: Filtra por etiqueta (no distingue mayúsculas).
+   *         schema: { type: string, enum: [Comunidad, Eventos, Salud, Consejos] }
    *     responses:
    *       200:
-   *         description: Página de publicaciones
+   *         description: Página de publicaciones activas
    *         content:
    *           application/json:
    *             schema: { $ref: '#/components/schemas/PaginaPublicaciones' }
    *       400: { $ref: '#/components/responses/DatosInvalidos' }
    */
   router.get("/", controller.listar);
+
+  /**
+   * @openapi
+   * /api/publicaciones/historico:
+   *   get:
+   *     tags: [Publicaciones]
+   *     summary: Lista el histórico de noticias aprobadas
+   *     description: Incluye publicaciones activas e inactivas en orden de más reciente a más antigua. Excluye borradores, solicitudes pendientes y archivadas.
+   *     parameters:
+   *       - in: query
+   *         name: pagina
+   *         schema: { type: integer, minimum: 1, default: 1 }
+   *       - in: query
+   *         name: limite
+   *         schema: { type: integer, minimum: 1, maximum: 50, default: 10 }
+   *       - in: query
+   *         name: etiqueta
+   *         description: Filtra por etiqueta (no distingue mayúsculas).
+   *         schema: { type: string, enum: [Comunidad, Eventos, Salud, Consejos] }
+   *       - in: query
+   *         name: busqueda
+   *         description: Busca coincidencias en el título.
+   *         schema: { type: string, maxLength: 150 }
+   *     responses:
+   *       200:
+   *         description: Página del histórico
+   *         content:
+   *           application/json:
+   *             schema: { $ref: '#/components/schemas/PaginaPublicaciones' }
+   *       400: { $ref: '#/components/responses/DatosInvalidos' }
+   */
+  router.get("/historico", controller.historico);
 
   /**
    * @openapi
@@ -52,7 +84,7 @@ export function crearRutasPublicacion(controller: PublicacionController): Router
    *             schema:
    *               type: array
    *               items: { type: string }
-   *             example: ["Historias", "La Fundación", "Talleres"]
+   *             example: ["Comunidad", "Consejos", "Eventos", "Salud"]
    */
   router.get("/etiquetas", controller.etiquetas); // antes de "/:id" para que no se confunda con un id
 
@@ -61,7 +93,8 @@ export function crearRutasPublicacion(controller: PublicacionController): Router
    * /api/publicaciones/{id}:
    *   get:
    *     tags: [Publicaciones]
-   *     summary: Obtiene una noticia publicada
+   *     summary: Obtiene una noticia aprobada
+   *     description: Permite consultar noticias aprobadas aunque estén inactivas; no expone publicaciones no aprobadas.
    *     parameters:
    *       - in: path
    *         name: id

@@ -42,7 +42,12 @@ export const swaggerSpec = swaggerJSDoc({
             titulo: { type: "string", example: "Taller: los jóvenes hornean sus primeras recetas" },
             resumen: { type: "string", nullable: true, example: "Una jornada para aprender y compartir." },
             cuerpo: { type: "string", example: "Cada participante preparó su propia receta..." },
-            etiqueta: { type: "string", nullable: true, example: "Talleres" },
+            etiqueta: {
+              type: "string",
+              enum: ["Comunidad", "Eventos", "Salud", "Consejos"],
+              nullable: true,
+              example: "Eventos",
+            },
             imagenUrl: {
               type: "string",
               format: "uri",

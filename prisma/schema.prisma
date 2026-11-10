@@ -38,6 +38,26 @@ enum TipoEvidencia {
   @@map("tipo_evidencia")
 }
 
+enum EtiquetaPublicacion {
+  COMUNIDAD @map("Comunidad")
+  EVENTOS   @map("Eventos")
+  SALUD     @map("Salud")
+  CONSEJOS  @map("Consejos")
+
+  @@map("etiqueta_publicacion")
+}
+
+enum PropositoPublicacion {
+  INFORMAR_A_LA_COMUNIDAD               @map("Informar a la comunidad")
+  EDUCAR_Y_COMPARTIR_CONOCIMIENTOS      @map("Educar y compartir conocimientos")
+  PROMOVER_LA_SALUD_Y_EL_BIENESTAR      @map("Promover la salud y el bienestar")
+  INVITAR_A_PARTICIPAR_EN_ACTIVIDADES   @map("Invitar a participar en actividades")
+  SENSIBILIZAR_SOBRE_UNA_CAUSA          @map("Sensibilizar sobre una causa")
+  COMPARTIR_RECURSOS_Y_CONOCIMIENTO     @map("Compartir recursos y conocimiento")
+
+  @@map("proposito_publicacion")
+}
+
 enum TipoInformacionContacto {
   RED_SOCIAL        @map("red_social")
   NUMERO_CONTACTO  @map("numero_contacto")
@@ -69,8 +89,8 @@ model Publicacion {
   titulo           String
   resumen          String?
   cuerpo           String
-  proposito        String?
-  etiqueta         String? // "tipo o etiqueta" del documento de alcance
+  proposito        PropositoPublicacion?
+  etiqueta         EtiquetaPublicacion?
   estado           EstadoPublicacion @default(BORRADOR)
   estaActivo       Boolean           @default(false) @map("esta_activo")
   autorId          String            @map("autor_id") @db.Uuid

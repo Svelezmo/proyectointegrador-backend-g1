@@ -1,5 +1,11 @@
 import { z } from "zod";
-import type { EstadoPublicacion } from "./publicacion.entity.js";
+import {
+  ETIQUETAS_PUBLICACION,
+  PROPOSITOS_PUBLICACION,
+  type EtiquetaPublicacion,
+  type EstadoPublicacion,
+  type PropositoPublicacion,
+} from "./publicacion.entity.js";
 import type { TipoEvidencia } from "./evidencia.js";
 
 /**
@@ -10,6 +16,10 @@ import type { TipoEvidencia } from "./evidencia.js";
  */
 
 const textoOpcional = (maximo: number) => z.string().trim().min(1).max(maximo).optional();
+const etiquetaFiltro = z.string().trim()
+  .transform(valor => ETIQUETAS_PUBLICACION.find(etiqueta => etiqueta.toLowerCase() === valor.toLowerCase()) ?? valor)
+  .pipe(z.enum(ETIQUETAS_PUBLICACION))
+  .optional();
 
 // ── Entrada ─────────────────────────────────────────────────
 
@@ -18,8 +28,8 @@ export const crearPublicacionDto = z
     titulo: z.string().trim().min(1).max(150),
     cuerpo: z.string().trim().min(1).max(10_000),
     resumen: textoOpcional(500),
-    proposito: textoOpcional(200),
-    etiqueta: textoOpcional(50),
+    proposito: z.enum(PROPOSITOS_PUBLICACION).optional(),
+    etiqueta: z.enum(ETIQUETAS_PUBLICACION).optional(),
     estado: z.enum(["BORRADOR", "PENDIENTE_APROBACION"]).default("BORRADOR"),
   })
   .strict();
@@ -30,8 +40,8 @@ export const editarPublicacionDto = crearPublicacionDto
   .partial()
   .extend({
     resumen: textoOpcional(500).nullable().optional(),
-    proposito: textoOpcional(200).nullable().optional(),
-    etiqueta: textoOpcional(50).nullable().optional(),
+    proposito: z.enum(PROPOSITOS_PUBLICACION).nullable().optional(),
+    etiqueta: z.enum(ETIQUETAS_PUBLICACION).nullable().optional(),
   })
   .strict()
   .refine(datos => Object.keys(datos).length > 0, { message: "Envíe al menos un campo" });
@@ -40,9 +50,14 @@ export type EditarPublicacionDto = z.output<typeof editarPublicacionDto>;
 export const listarPublicacionesDto = z.object({
   pagina: z.coerce.number().int().min(1).default(1),
   limite: z.coerce.number().int().min(1).max(50).default(10),
-  etiqueta: textoOpcional(50),
+  etiqueta: etiquetaFiltro,
 });
 export type ListarPublicacionesDto = z.output<typeof listarPublicacionesDto>;
+
+export const listarHistoricoDto = listarPublicacionesDto.extend({
+  busqueda: z.string().trim().max(150).optional(),
+});
+export type ListarHistoricoDto = z.output<typeof listarHistoricoDto>;
 
 export const idPublicacionDto = z.object({ id: z.uuid() });
 
@@ -54,7 +69,7 @@ export interface PublicacionPublicaDto {
   titulo: string;
   resumen: string | null;
   cuerpo: string;
-  etiqueta: string | null;
+  etiqueta: EtiquetaPublicacion | null;
   /** URL del medio principal (imagen o video) o null si no se adjuntó evidencia. */
   imagenUrl: string | null;
   tipoEvidencia: TipoEvidencia | null;
@@ -66,6 +81,6 @@ export interface PublicacionInternaDto extends PublicacionPublicaDto {
   estado: EstadoPublicacion;
   estaActivo: boolean;
   autorId: string;
-  proposito: string | null;
+  proposito: PropositoPublicacion | null;
   actualizadoEn: string;
 }

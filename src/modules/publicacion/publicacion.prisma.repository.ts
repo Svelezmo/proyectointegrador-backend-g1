@@ -1,6 +1,6 @@
 import type { Prisma, PrismaClient } from "../../generated/prisma/client.js";
 import type { Paginacion } from "../../shared/domain/paginacion.js";
-import type { Publicacion } from "./publicacion.entity.js";
+import type { EtiquetaPublicacion, Publicacion } from "./publicacion.entity.js";
 import { PublicacionMapper } from "./publicacion.mapper.js";
 import type { PublicacionRepository } from "./publicacion.repository.js";
 
@@ -54,17 +54,41 @@ export class PrismaPublicacionRepository implements PublicacionRepository {
     });
   }
 
-  async listarPublicadas({ pagina, limite, etiqueta }: Paginacion & { etiqueta?: string | undefined }) {
+  async listarPublicadas({ pagina, limite, etiqueta }: Paginacion & { etiqueta?: EtiquetaPublicacion | undefined }) {
     const where = {
       estado: "PUBLICADA" as const,
       estaActivo: true,
-      ...(etiqueta ? { etiqueta: { equals: etiqueta, mode: "insensitive" as const } } : {}),
+      ...(etiqueta ? { etiqueta: PublicacionMapper.etiquetaAPersistencia(etiqueta) } : {}),
     };
     const [filas, total] = await this.db.$transaction([
       this.db.publicacion.findMany({
         where,
         include: CON_IMAGEN,
         orderBy: { publicadaEn: "desc" },
+        skip: (pagina - 1) * limite,
+        take: limite,
+      }),
+      this.db.publicacion.count({ where }),
+    ]);
+    return { items: filas.map(PublicacionMapper.aEntidad), total };
+  }
+
+  async listarHistorico({
+    pagina,
+    limite,
+    etiqueta,
+    busqueda,
+  }: Paginacion & { etiqueta?: EtiquetaPublicacion | undefined; busqueda?: string | undefined }) {
+    const where = {
+      estado: "PUBLICADA" as const,
+      ...(etiqueta ? { etiqueta: PublicacionMapper.etiquetaAPersistencia(etiqueta) } : {}),
+      ...(busqueda ? { titulo: { contains: busqueda, mode: "insensitive" as const } } : {}),
+    };
+    const [filas, total] = await this.db.$transaction([
+      this.db.publicacion.findMany({
+        where,
+        include: CON_IMAGEN,
+        orderBy: [{ publicadaEn: { sort: "desc", nulls: "last" } }, { id: "asc" }],
         skip: (pagina - 1) * limite,
         take: limite,
       }),
@@ -80,7 +104,9 @@ export class PrismaPublicacionRepository implements PublicacionRepository {
       select: { etiqueta: true },
       orderBy: { etiqueta: "asc" },
     });
-    return filas.flatMap(fila => (fila.etiqueta ? [fila.etiqueta] : []));
+    return filas
+      .flatMap(fila => (fila.etiqueta ? [PublicacionMapper.etiquetaDesdePersistencia(fila.etiqueta)] : []))
+      .sort((a, b) => a.localeCompare(b));
   }
 
   async listarPorEstado(estado: Publicacion["estado"], limite: number): Promise<Publicacion[]> {

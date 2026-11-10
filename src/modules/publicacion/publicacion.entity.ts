@@ -12,13 +12,26 @@ import type { TipoEvidencia } from "./evidencia.js";
 export const ESTADOS_PUBLICACION = ["BORRADOR", "PENDIENTE_APROBACION", "PUBLICADA", "ARCHIVADA"] as const;
 export type EstadoPublicacion = (typeof ESTADOS_PUBLICACION)[number];
 
+export const ETIQUETAS_PUBLICACION = ["Comunidad", "Eventos", "Salud", "Consejos"] as const;
+export type EtiquetaPublicacion = (typeof ETIQUETAS_PUBLICACION)[number];
+
+export const PROPOSITOS_PUBLICACION = [
+  "Informar a la comunidad",
+  "Educar y compartir conocimientos",
+  "Promover la salud y el bienestar",
+  "Invitar a participar en actividades",
+  "Sensibilizar sobre una causa",
+  "Compartir recursos y conocimiento",
+] as const;
+export type PropositoPublicacion = (typeof PROPOSITOS_PUBLICACION)[number];
+
 export interface PropsPublicacion {
   id: string;
   titulo: string;
   resumen: string | null;
   cuerpo: string;
-  proposito: string | null;
-  etiqueta: string | null;
+  proposito: PropositoPublicacion | null;
+  etiqueta: EtiquetaPublicacion | null;
   /** URL del medio principal, guardado como evidencia de tipo IMAGEN o VIDEO. */
   imagenUrl: string | null;
   tipoEvidencia: TipoEvidencia | null;
@@ -35,8 +48,8 @@ export interface DatosNuevaPublicacion {
   titulo: string;
   cuerpo: string;
   resumen?: string | null | undefined;
-  proposito?: string | null | undefined;
-  etiqueta?: string | null | undefined;
+  proposito?: PropositoPublicacion | null | undefined;
+  etiqueta?: EtiquetaPublicacion | null | undefined;
   imagenUrl?: string | null | undefined;
   tipoEvidencia?: TipoEvidencia | null | undefined;
   estado?: "BORRADOR" | "PENDIENTE_APROBACION" | undefined;

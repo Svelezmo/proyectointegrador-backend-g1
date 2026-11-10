@@ -46,8 +46,8 @@ export function crearRutasMiniApp(controller: MiniAppController): Router {
    *               titulo: { type: string, maxLength: 150 }
    *               cuerpo: { type: string, maxLength: 10000 }
    *               resumen: { type: string }
-   *               proposito: { type: string }
-   *               etiqueta: { type: string }
+   *               proposito: { type: string, enum: ["Informar a la comunidad", "Educar y compartir conocimientos", "Promover la salud y el bienestar", "Invitar a participar en actividades", "Sensibilizar sobre una causa", "Compartir recursos y conocimiento"] }
+   *               etiqueta: { type: string, enum: [Comunidad, Eventos, Salud, Consejos] }
    *               estado: { type: string, enum: [BORRADOR, PENDIENTE_APROBACION] }
    *               imagenUrl: { type: string, format: uri, description: URL segura devuelta por Cloudinary }
    *     responses:

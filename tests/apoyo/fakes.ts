@@ -1,5 +1,6 @@
 import type { Actor } from "../../src/shared/domain/actor.js";
 import type { Publicacion } from "../../src/modules/publicacion/publicacion.entity.js";
+import type { EtiquetaPublicacion } from "../../src/modules/publicacion/publicacion.entity.js";
 import type { PublicacionRepository } from "../../src/modules/publicacion/publicacion.repository.js";
 import type { UsuarioAutorizado } from "../../src/modules/usuario-autorizado/usuario-autorizado.entity.js";
 import type { UsuarioAutorizadoRepository } from "../../src/modules/usuario-autorizado/usuario-autorizado.repository.js";
@@ -34,15 +35,44 @@ export class PublicacionRepositoryEnMemoria implements PublicacionRepository {
     this.datos.delete(id);
     this.imagenes.delete(id);
   }
-  async listarPublicadas({ pagina, limite, etiqueta }: { pagina: number; limite: number; etiqueta?: string | undefined }) {
+  async listarPublicadas({
+    pagina,
+    limite,
+    etiqueta,
+  }: { pagina: number; limite: number; etiqueta?: EtiquetaPublicacion | undefined }) {
     const publicadas = [...this.datos.values()].filter(
-      p => p.estaPublicada && (!etiqueta || p.aProps().etiqueta?.toLowerCase() === etiqueta.toLowerCase()),
+      p => p.estaPublicada && (!etiqueta || p.aProps().etiqueta === etiqueta),
     );
+    return { items: publicadas.slice((pagina - 1) * limite, pagina * limite), total: publicadas.length };
+  }
+  async listarHistorico({
+    pagina,
+    limite,
+    etiqueta,
+    busqueda,
+  }: {
+    pagina: number;
+    limite: number;
+    etiqueta?: EtiquetaPublicacion | undefined;
+    busqueda?: string | undefined;
+  }) {
+    const publicadas = [...this.datos.values()]
+      .filter(p => {
+        const props = p.aProps();
+        return p.estado === "PUBLICADA"
+          && (!etiqueta || props.etiqueta === etiqueta)
+          && (!busqueda || props.titulo.toLowerCase().includes(busqueda.toLowerCase()));
+      })
+      .sort((a, b) => {
+        const fechaA = a.aProps().publicadaEn?.getTime() ?? Number.NEGATIVE_INFINITY;
+        const fechaB = b.aProps().publicadaEn?.getTime() ?? Number.NEGATIVE_INFINITY;
+        return fechaB - fechaA || a.id.localeCompare(b.id);
+      });
     return { items: publicadas.slice((pagina - 1) * limite, pagina * limite), total: publicadas.length };
   }
   async listarEtiquetasPublicadas() {
     const etiquetas = [...this.datos.values()].filter(p => p.estaPublicada).map(p => p.aProps().etiqueta);
-    return [...new Set(etiquetas.filter((e): e is string => e !== null))].sort();
+    return [...new Set(etiquetas.flatMap(etiqueta => (etiqueta ? [etiqueta] : [])))].sort();
   }
   async listarPorEstado(estado: Publicacion["estado"], limite: number) {
     return [...this.datos.values()].filter(p => p.estado === estado).slice(0, limite);

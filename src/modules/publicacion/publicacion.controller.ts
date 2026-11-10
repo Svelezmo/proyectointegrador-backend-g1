@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { validar } from "../../shared/validacion.js";
-import { idPublicacionDto, listarPublicacionesDto } from "./publicacion.dto.js";
+import { idPublicacionDto, listarHistoricoDto, listarPublicacionesDto } from "./publicacion.dto.js";
 import type { PublicacionService } from "./publicacion.service.js";
 
 /**
@@ -9,7 +9,7 @@ import type { PublicacionService } from "./publicacion.service.js";
  * No contiene reglas de negocio ni consultas a la base.
  * Los errores que lance el service los atrapa el middleware manejadorErrores.
  *
- * La API pública solo lee noticias activas; las operaciones internas se exponen en Gestión.
+ * La lista de Inicio solo lee noticias activas; el histórico y el detalle admiten toda noticia aprobada.
  */
 export class PublicacionController {
   constructor(private readonly service: PublicacionService) {}
@@ -17,6 +17,11 @@ export class PublicacionController {
   listar = async (req: Request, res: Response): Promise<void> => {
     const filtro = validar(listarPublicacionesDto, req.query);
     res.json(await this.service.listarPublicadas(filtro));
+  };
+
+  historico = async (req: Request, res: Response): Promise<void> => {
+    const filtro = validar(listarHistoricoDto, req.query);
+    res.json(await this.service.listarHistorico(filtro));
   };
 
   etiquetas = async (_req: Request, res: Response): Promise<void> => {

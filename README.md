@@ -72,8 +72,9 @@ npm run dev            # http://127.0.0.1:3000
 | `GET /api-docs` | Documentación Swagger (probar los endpoints desde el navegador) |
 | `GET /health` | Estado del servidor y la base |
 | `GET /api/publicaciones?pagina=1&limite=10&etiqueta=salud` | Noticias aprobadas y activas, más recientes primero |
+| `GET /api/publicaciones/historico?pagina=1&limite=10&etiqueta=Salud&busqueda=actividad` | Histórico de aprobadas, activas o inactivas; filtros por etiqueta y título |
 | `GET /api/publicaciones/etiquetas` | Etiquetas de las noticias publicadas (filtros de la web) |
-| `GET /api/publicaciones/:id` | Una noticia publicada (incluye `imagenUrl`) |
+| `GET /api/publicaciones/:id` | Una noticia aprobada, incluso inactiva (incluye `imagenUrl`) |
 | `GET /api/contacto` | Información de contacto de la fundación (pública, para el pie de página) |
 | `POST /api/gestion/upload-signature` | Firma una subida directa a Cloudinary para la web; requiere `Authorization: Bearer <token>` |
 | `POST /api/miniapp/upload-signature` | Firma una subida para una Mini App autenticada con `X-Telegram-Init-Data` |
@@ -97,8 +98,11 @@ Las rutas de gestión requieren `Authorization: Bearer <token>` en cada petició
 | Método y ruta | Body / parámetros | Qué hace |
 |---|---|---|
 | `GET /api/publicaciones` | Query opcional: `pagina`, `limite` (máx. 50), `etiqueta` | Lista noticias publicadas y activas, paginadas. |
+| `GET /api/publicaciones/historico` | Query opcional: `pagina`, `limite` (máx. 50), `etiqueta`, `busqueda` | Lista aprobadas activas o inactivas; `busqueda` coincide con el título. |
 | `GET /api/publicaciones/etiquetas` | Sin body | Devuelve etiquetas disponibles para filtros. |
-| `GET /api/publicaciones/:id` | `id` UUID en la ruta | Devuelve una noticia visible. |
+| `GET /api/publicaciones/:id` | `id` UUID en la ruta | Devuelve una noticia aprobada, también si está inactiva. |
+
+Las etiquetas válidas son `Comunidad`, `Eventos`, `Salud` y `Consejos`. Los propósitos válidos son `Informar a la comunidad`, `Educar y compartir conocimientos`, `Promover la salud y el bienestar`, `Invitar a participar en actividades`, `Sensibilizar sobre una causa` y `Compartir recursos y conocimiento`.
 
 **Gestión desde navegador (Bearer requerido):**
 

@@ -112,8 +112,8 @@ export function crearRutasGestion(controller: GestionController): Router {
    *               titulo: { type: string }
    *               resumen: { type: string }
    *               cuerpo: { type: string }
-   *               proposito: { type: string }
-   *               etiqueta: { type: string }
+   *               proposito: { type: string, enum: ["Informar a la comunidad", "Educar y compartir conocimientos", "Promover la salud y el bienestar", "Invitar a participar en actividades", "Sensibilizar sobre una causa", "Compartir recursos y conocimiento"] }
+   *               etiqueta: { type: string, enum: [Comunidad, Eventos, Salud, Consejos] }
    *     responses:
    *       200: { description: Noticia actualizada }
    *       403: { $ref: '#/components/responses/NoAutorizado' }

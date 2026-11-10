@@ -106,7 +106,7 @@ y el middleware `manejadorErrores` lo convierte en 404, 409, etc. El bot hace lo
 - Solo `DIRECTORA` puede aprobar, archivar o activar/desactivar publicaciones.
 - Una noticia aprobada queda en `PUBLICADA`, pero invisible en la API pública hasta que la directora la active (`esta_activo = true`).
 - Una publicación `ARCHIVADA` no se edita.
-- La web pública solo ve noticias `PUBLICADA` y activas, sin datos internos (autor, estado).
+- El listado de Inicio muestra noticias `PUBLICADA` y activas; `/api/publicaciones/historico` incluye todas las `PUBLICADA`, activas o inactivas. Ambos ocultan datos internos (autor, estado).
 - La gestión de usuarios es de colaboradores; su eliminación se implementa como desactivación para conservar el historial.
 - La información de contacto se guarda con nombre, tipo (`RED_SOCIAL`, `NUMERO_CONTACTO`, `DIRECCION`) e información.
 
